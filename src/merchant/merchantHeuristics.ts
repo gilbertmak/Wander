@@ -9,8 +9,8 @@ export type PatternType = "contains" | "prefix" | "regex";
 export type MerchantSeed = {
   id: string;
   canonicalName: string;
-  defaultCategoryId: string;
-  defaultMccId: string;
+  defaultCategoryId?: string | null;
+  defaultMccId?: string | null;
   country: string;
 };
 
@@ -19,8 +19,8 @@ export type MerchantHeuristicSeed = {
   merchantId: string;
   patternType: PatternType;
   patternValue: string;
-  mccId: string;
-  categoryId: string;
+  mccId?: string | null;
+  categoryId?: string | null;
   confidenceScore: number;
   source: "seed" | "user_correction";
   verifiedAt?: string;
@@ -29,11 +29,17 @@ export type MerchantHeuristicSeed = {
 export type MerchantResolution = {
   merchantId: string;
   canonicalName: string;
-  categoryId: string;
-  mccCode: string;
+  categoryId?: string;
+  mccCode?: string;
   confidenceScore: number;
   source: MerchantHeuristicSeed["source"];
   explanation: string;
+};
+
+export type MerchantResolverOptions = {
+  merchantRecords?: MerchantSeed[];
+  heuristicRecords?: MerchantHeuristicSeed[];
+  mccRecords?: MccSeed[];
 };
 
 export const merchantSeeds: MerchantSeed[] = [
@@ -264,9 +270,15 @@ export function seedMerchantHeuristics(connection: DatabaseConnection): SeedMerc
   };
 }
 
-export function resolveMerchant(description: string): MerchantResolution | undefined {
+export function resolveMerchant(
+  description: string,
+  options: MerchantResolverOptions = {},
+): MerchantResolution | undefined {
+  const heuristicRecords = options.heuristicRecords ?? merchantHeuristicSeeds;
+  const merchantRecords = options.merchantRecords ?? merchantSeeds;
+  const mccRecords = options.mccRecords ?? mccSeeds;
   const normalizedDescription = normalizeMerchantText(description);
-  const match = merchantHeuristicSeeds
+  const match = heuristicRecords
     .filter((candidate) => matchesPattern(normalizedDescription, candidate))
     .sort(compareHeuristicMatches)[0];
 
@@ -274,18 +286,18 @@ export function resolveMerchant(description: string): MerchantResolution | undef
     return undefined;
   }
 
-  const merchant = merchantSeeds.find((candidate) => candidate.id === match.merchantId);
-  const mcc = mccSeeds.find((candidate) => candidate.id === match.mccId);
+  const merchant = merchantRecords.find((candidate) => candidate.id === match.merchantId);
+  const mcc = mccRecords.find((candidate) => candidate.id === match.mccId);
 
-  if (!merchant || !mcc) {
+  if (!merchant) {
     return undefined;
   }
 
   return {
     merchantId: merchant.id,
     canonicalName: merchant.canonicalName,
-    categoryId: match.categoryId,
-    mccCode: mcc.code,
+    categoryId: match.categoryId ?? undefined,
+    mccCode: mcc?.code,
     confidenceScore: match.confidenceScore,
     source: match.source,
     explanation: `Matched ${merchant.canonicalName} using ${match.patternType} pattern "${match.patternValue}".`,
