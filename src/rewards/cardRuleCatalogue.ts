@@ -54,6 +54,7 @@ export type EligibilityJson = {
   merchantCategoryNotes?: string[];
   selectedCategoryCount?: number;
   excludedMccCodes?: string[];
+  excludedWalletTypes?: string[];
   excludedNotes?: string[];
 };
 
@@ -152,6 +153,7 @@ export const cardRuleSeeds: CardRuleSeed[] = [
     exclusion: {
       channels: [],
       excludedMccCodes: ["6012", "9399"],
+      excludedWalletTypes: ["in_app_mobile_wallet"],
       excludedNotes: ["quasi-cash", "government services", "fees", "interest", "refunded spend"],
     },
     transferRule: transfer("program_citi_thankyou", 2.5, 25_000),
@@ -214,7 +216,10 @@ export const cardRuleSeeds: CardRuleSeed[] = [
     capPeriod: "calendar_month",
     capAmountMinor: 100_000,
     baseFormula: mpdFormula(0.4, "aggregate_period", 500),
-    bonusFormula: bonusFormula(4, 100_000, "calendar_month", 0.4),
+    bonusFormula: {
+      ...bonusFormula(4, 100_000, "calendar_month", 0.4, "aggregate_period"),
+      rounding: { mode: "aggregate_period", unitMinor: 500 },
+    },
     eligibility: {
       channels: ["online", "offline", "contactless"],
       categoryIds: ["category_dining", "category_groceries", "category_transport"],
@@ -362,9 +367,10 @@ function bonusFormula(
   capAmountMinor: number,
   capPeriod: BonusFormulaJson["capPeriod"],
   excessMilesPerDollar: number,
+  roundingMode: RuleFormulaJson["rounding"]["mode"] = "floor_per_transaction",
 ): BonusFormulaJson {
   return {
-    ...mpdFormula(milesPerDollar, "floor_per_transaction", 100),
+    ...mpdFormula(milesPerDollar, roundingMode, 100),
     capAmountMinor,
     capPeriod,
     excessMilesPerDollar,
