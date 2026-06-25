@@ -17,6 +17,7 @@ describe("Epic 2 app shell", () => {
 
     expect(within(mobilePreview).getByText("68%")).toBeInTheDocument();
     expect(within(mobilePreview).getByText("Target corpus")).toBeInTheDocument();
+    expect(within(mobilePreview).getByText(/Estimated FI year/i)).toBeInTheDocument();
     expect(within(mobilePreview).getByRole("button", { name: /review 7 imported rows/i }));
     expect(within(mobilePreview).queryByText("Fire Progress card")).not.toBeInTheDocument();
   });
@@ -43,7 +44,23 @@ describe("Epic 2 app shell", () => {
     expect(screen.getByRole("table", { name: "Imported transaction review" })).toBeInTheDocument();
     expect(screen.getByText("Matched refund")).toBeInTheDocument();
     expect(screen.getByText("FI impact")).toBeInTheDocument();
+    expect(screen.getByText("Scenario comparison")).toBeInTheDocument();
+    expect(screen.getByText(/Baseline: FI age 41/i)).toBeInTheDocument();
     expect(screen.queryByText("MCC confidence")).not.toBeInTheDocument();
+  });
+
+  it("shows scenario comparison in the Plan tab", async () => {
+    render(<App />);
+
+    const mobileTabs = screen.getByLabelText("Mobile tabs");
+    await userEvent.click(within(mobileTabs).getByRole("button", { name: /plan/i }));
+
+    const mobilePreview = screen.getByLabelText("Mobile application preview");
+
+    expect(within(mobilePreview).getByRole("heading", { name: /FI paths/i })).toBeInTheDocument();
+    expect(within(mobilePreview).getByText("Baseline")).toBeInTheDocument();
+    expect(within(mobilePreview).getByText("Optimistic")).toBeInTheDocument();
+    expect(within(mobilePreview).getByText("Conservative")).toBeInTheDocument();
   });
 
   it("switches desktop preview surfaces", async () => {

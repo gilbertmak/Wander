@@ -1,3 +1,7 @@
+import { formatCurrency, formatPercent } from "../domain/planner/format";
+import { deriveAnnualizedExpenses } from "../domain/planner/projection";
+import { samplePlannerViewModel } from "../domain/planner/sampleData";
+import type { ProjectionResult } from "../domain/planner/types";
 import { useAppShellStore, type MobileTab } from "../state/appShellStore";
 
 const mobileTabs: Array<{ id: MobileTab; label: string; badge?: string }> = [
@@ -6,13 +10,6 @@ const mobileTabs: Array<{ id: MobileTab; label: string; badge?: string }> = [
   { id: "transactions", label: "Txns", badge: "7" },
   { id: "cards", label: "Cards", badge: "2" },
   { id: "profile", label: "Profile" },
-];
-
-const homeMetrics = [
-  { label: "Net Worth", value: "$742k", detail: "+$4.8k this month" },
-  { label: "CPF", value: "$218k", detail: "29% of FI corpus" },
-  { label: "Net Spend", value: "$4.2k", detail: "$620 below plan" },
-  { label: "Miles Bank", value: "86.4k", detail: "72k redeemable" },
 ];
 
 const reviewRows = [
@@ -56,12 +53,7 @@ export function App() {
         <div className="mobile-content">
           {activeTab === "home" && <MobileHome />}
           {activeTab === "cards" && <CardsTab />}
-          {activeTab === "plan" && (
-            <PlaceholderPanel
-              title="Plan"
-              copy="Scenario comparison, expense snapshots, and FIRE assumptions land here after the database and planner epics."
-            />
-          )}
+          {activeTab === "plan" && <PlanTab scenarios={samplePlannerViewModel.scenarios} />}
           {activeTab === "transactions" && (
             <PlaceholderPanel
               title="Transactions"
@@ -120,12 +112,34 @@ export function App() {
 }
 
 function MobileHome() {
+  const { activeSnapshot, baseline } = samplePlannerViewModel;
+  const fireProgress = formatPercent(baseline.currentFireProgress);
+  const annualizedSnapshot = deriveAnnualizedExpenses(activeSnapshot);
+  const homeMetrics = [
+    {
+      label: "Net Worth",
+      value: formatCurrency(baseline.points[0].netWorth, true),
+      detail: `${fireProgress} of FI corpus`,
+    },
+    {
+      label: "FI Corpus",
+      value: formatCurrency(baseline.targetFireNumber, true),
+      detail: `${baseline.yearsToFire ?? "No"} years to FI`,
+    },
+    {
+      label: "Net Spend",
+      value: formatCurrency(activeSnapshot.netSpend, true),
+      detail: `${formatCurrency(annualizedSnapshot, true)} annualized`,
+    },
+    { label: "Miles Bank", value: "86.4k", detail: "72k redeemable" },
+  ];
+
   return (
     <article className="screen-panel mobile-home">
       <header>
         <p className="eyebrow">FIRE Progress</p>
         <div className="fire-score">
-          <span>68%</span>
+          <span>{fireProgress}</span>
           <p>to FI target</p>
         </div>
       </header>
@@ -133,12 +147,18 @@ function MobileHome() {
       <section className="corpus-card" aria-label="Corpus progress">
         <div>
           <span>Target corpus</span>
-          <strong>$1.1m / $1.62m</strong>
+          <strong>
+            {formatCurrency(baseline.points[0].netWorth, true)} /{" "}
+            {formatCurrency(baseline.targetFireNumber, true)}
+          </strong>
         </div>
-        <div className="progress-track" aria-label="68 percent complete">
-          <span style={{ width: "68%" }} />
+        <div className="progress-track" aria-label={`${fireProgress} complete`}>
+          <span style={{ width: fireProgress }} />
         </div>
-        <p>Estimated FI date: Aug 2034 · Runway: 8.2 years</p>
+        <p>
+          Estimated FI year: {baseline.projectedFireYear ?? "Outside projection"} · Runway:{" "}
+          {baseline.yearsToFire ?? "No"} years
+        </p>
       </section>
 
       <section className="metric-grid" aria-label="Financial summary">
@@ -154,6 +174,30 @@ function MobileHome() {
       <button className="primary-action" type="button">
         Review 7 imported rows
       </button>
+    </article>
+  );
+}
+
+function PlanTab({ scenarios }: { scenarios: ProjectionResult[] }) {
+  return (
+    <article className="screen-panel plan-tab">
+      <header>
+        <p className="eyebrow">Scenario Comparison</p>
+        <h2>FI paths from current assumptions</h2>
+        <p>Expense snapshots can update annual spend after user confirmation.</p>
+      </header>
+
+      <section className="scenario-list" aria-label="FIRE scenario comparison">
+        {scenarios.map((scenario) => (
+          <article key={scenario.scenarioId}>
+            <div>
+              <strong>{scenario.label}</strong>
+              <p>{formatCurrency(scenario.targetFireNumber, true)} target corpus</p>
+            </div>
+            <span>{scenario.projectedFireAge ? `Age ${scenario.projectedFireAge}` : "No FI"}</span>
+          </article>
+        ))}
+      </section>
     </article>
   );
 }
@@ -191,6 +235,9 @@ function CardsTab() {
 }
 
 function DesktopDashboard({ activeSurface }: { activeSurface: string }) {
+  const { activeSnapshot, baseline, scenarios } = samplePlannerViewModel;
+  const annualizedSnapshot = deriveAnnualizedExpenses(activeSnapshot);
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -204,8 +251,12 @@ function DesktopDashboard({ activeSurface }: { activeSurface: string }) {
       </header>
 
       <section className="kpi-row" aria-label="Key planning metrics">
-        <Kpi label="FI Progress" value="68%" trend="+1.2%" />
-        <Kpi label="Net Spend" value="$4.2k" trend="-$620" />
+        <Kpi label="FI Progress" value={formatPercent(baseline.currentFireProgress)} trend="Computed" />
+        <Kpi
+          label="Net Spend"
+          value={formatCurrency(activeSnapshot.netSpend, true)}
+          trend={`${formatCurrency(annualizedSnapshot, true)} annualized`}
+        />
         <Kpi label="Redeemable Miles" value="72k" trend="+3.4k" />
       </section>
 
@@ -237,9 +288,24 @@ function DesktopDashboard({ activeSurface }: { activeSurface: string }) {
         </article>
 
         <aside className="insight-column" aria-label="Planning insights">
-          <InsightCard title="FI impact" value="Expense snapshot lowers FI date by 3 months." />
+          <InsightCard
+            title="FI impact"
+            value={`Baseline FI at age ${baseline.projectedFireAge ?? "outside projection"}.`}
+          />
           <InsightCard title="Miles overview" value="Refund reversals are netted from accumulated miles." />
-          <InsightCard title="Expense snapshot" value="$50.4k annualized from latest import." />
+          <InsightCard
+            title="Expense snapshot"
+            value={`${formatCurrency(annualizedSnapshot, true)} annualized from latest import.`}
+          />
+          <article className="insight-card scenario-card">
+            <span>Scenario comparison</span>
+            {scenarios.map((scenario) => (
+              <p key={scenario.scenarioId}>
+                {scenario.label}:{" "}
+                {scenario.projectedFireAge ? `FI age ${scenario.projectedFireAge}` : "outside projection"}
+              </p>
+            ))}
+          </article>
         </aside>
       </section>
     </div>

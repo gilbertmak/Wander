@@ -263,7 +263,8 @@ p {
   gap: 10px;
 }
 
-.activity-list article {
+.activity-list article,
+.scenario-list article {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -272,10 +273,20 @@ p {
   padding-top: 12px;
 }
 
-.activity-list span {
+.scenario-list {
+  display: grid;
+  gap: 10px;
+}
+
+.activity-list span,
+.scenario-list span {
   color: var(--color-gold);
   font-weight: 800;
   white-space: nowrap;
+}
+
+.scenario-card {
+  gap: 8px;
 }
 
 .workspace {
