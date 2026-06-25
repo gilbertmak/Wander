@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import type { DatabaseConnection } from "../db/client";
 import { createRepositories } from "../db/repositories";
+import { assertNoImportDuplicates } from "./duplicateDetection";
 import type { ParseStatementRequest, ParseStatementSuccess } from "./parserBridge";
 
 export type ImportPreviewTransaction = {
@@ -105,7 +106,12 @@ export function buildImportPreview(
 export function commitImportPreview(
   connection: DatabaseConnection,
   preview: ImportPreview,
+  options: { skipDuplicateCheck?: boolean } = {},
 ): CommitImportResult {
+  if (!options.skipDuplicateCheck) {
+    assertNoImportDuplicates(connection, preview);
+  }
+
   const repositories = createRepositories(connection);
   const accountIds: string[] = [];
   const transactionIds: string[] = [];
