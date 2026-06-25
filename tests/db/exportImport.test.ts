@@ -1,0 +1,215 @@
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import { createDatabaseConnection, type DatabaseConnection } from "../../src/db/client";
+import {
+  assertMigrationsCurrent,
+  exportFormatVersion,
+  exportLocalData,
+  importLocalData,
+} from "../../src/db/exportImport";
+import { runMigrations } from "../../src/db/migrate";
+import { createRepositories } from "../../src/db/repositories";
+
+describe("local data export and import", () => {
+  let source: DatabaseConnection;
+
+  beforeEach(() => {
+    source = createDatabaseConnection();
+    runMigrations(source);
+    seedSourceDatabase(source);
+  });
+
+  afterEach(() => {
+    source.close();
+  });
+
+  it("exports all local data as a versioned JSON artifact without source files", () => {
+    const artifact = exportLocalData(source);
+
+    expect(artifact.formatVersion).toBe(exportFormatVersion);
+    expect(artifact.app).toEqual({ name: "Wander", exportSource: "local-sqlite" });
+    expect(artifact.database.sourceFilesIncluded).toBe(false);
+    expect(artifact.database.migrationIds).toEqual(["0001"]);
+    expect(artifact.data.profiles).toHaveLength(1);
+    expect(artifact.data.statement_imports).toHaveLength(1);
+    expect(artifact.data.seeded_data_versions).toHaveLength(1);
+
+    const serialized = JSON.stringify(artifact);
+    expect(serialized).not.toContain("sourceFileBytes");
+    expect(serialized).not.toContain("originalPdf");
+  });
+
+  it("imports an export artifact into a migrated empty database", () => {
+    const artifact = exportLocalData(source);
+    const target = createDatabaseConnection();
+    runMigrations(target);
+
+    try {
+      const result = importLocalData(target, artifact);
+      const repositories = createRepositories(target);
+
+      expect(result.importedTables).toBe(16);
+      expect(repositories.profiles.getById("profile_1")?.name).toBe("Primary");
+      expect(repositories.statementImports.getByProfileAndHash("profile_1", "hash_1")?.bankName).toBe(
+        "DBS",
+      );
+      expect(repositories.transactions.getByFingerprint("profile_1", "fingerprint_1")?.amountMinor).toBe(
+        -1840,
+      );
+
+      const seededVersion = target.sqlite
+        .prepare("SELECT dataset_version FROM seeded_data_versions WHERE dataset_name = ?")
+        .get("mcc_taxonomy") as { dataset_version: string };
+
+      expect(seededVersion.dataset_version).toBe("2026.06");
+    } finally {
+      target.close();
+    }
+  });
+
+  it("replaces existing local data during import", () => {
+    const artifact = exportLocalData(source);
+    const target = createDatabaseConnection();
+    runMigrations(target);
+    seedSourceDatabase(target, "existing_profile", "existing_hash", "existing_fingerprint");
+
+    try {
+      importLocalData(target, artifact);
+
+      const profileCount = target.sqlite.prepare("SELECT count(*) as count FROM profiles").get() as {
+        count: number;
+      };
+
+      expect(profileCount.count).toBe(1);
+      expect(createRepositories(target).profiles.getById("existing_profile")).toBeUndefined();
+      expect(createRepositories(target).profiles.getById("profile_1")?.name).toBe("Primary");
+    } finally {
+      target.close();
+    }
+  });
+
+  it("rejects export and import when migrations are missing", () => {
+    const unmigrated = createDatabaseConnection();
+
+    try {
+      expect(() => assertMigrationsCurrent(unmigrated)).toThrow(/migrations are not current/i);
+      expect(() => exportLocalData(unmigrated)).toThrow(/migrations are not current/i);
+      expect(() => importLocalData(unmigrated, exportLocalData(source))).toThrow(
+        /migrations are not current/i,
+      );
+    } finally {
+      unmigrated.close();
+    }
+  });
+
+  it("rejects invalid or incompatible artifacts", () => {
+    const target = createDatabaseConnection();
+    runMigrations(target);
+
+    try {
+      const artifact = exportLocalData(source);
+
+      expect(() => importLocalData(target, { ...artifact, formatVersion: 999 })).toThrow();
+      expect(() =>
+        importLocalData(target, {
+          ...artifact,
+          database: { ...artifact.database, migrationIds: [] },
+        }),
+      ).toThrow(/missing required migrations/i);
+    } finally {
+      target.close();
+    }
+  });
+});
+
+function seedSourceDatabase(
+  connection: DatabaseConnection,
+  profileId = "profile_1",
+  sourceFileHash = "hash_1",
+  transactionFingerprint = "fingerprint_1",
+) {
+  const repositories = createRepositories(connection);
+
+  repositories.profiles.create({ id: profileId, name: "Primary", currency: "SGD" });
+  repositories.plannerProfiles.upsert({
+    profileId,
+    currentAge: 36,
+    targetRetirementAge: 45,
+    currentNetWorthMinor: 110_000_000,
+    targetFireNumberMinor: 162_000_000,
+    annualExpensesMinor: 5_670_000,
+    safeWithdrawalRate: 0.035,
+    expectedReturnRate: 0.055,
+    inflationRate: 0.025,
+  });
+  repositories.statementImports.create({
+    id: `import_${profileId}`,
+    profileId,
+    sourceFileHash,
+    sourceFilename: "dbs-statement.pdf",
+    bankName: "DBS",
+    parserName: "StatementSenseiBridge",
+    parserVersion: "0.1.0",
+    importStatus: "committed",
+  });
+  repositories.accounts.create({
+    id: `account_${profileId}`,
+    profileId,
+    institutionName: "DBS",
+    accountLabel: "DBS Visa",
+    accountType: "credit_card",
+    maskedIdentifier: "**** 1234",
+    currency: "SGD",
+  });
+  repositories.expenseSnapshots.create({
+    id: `snapshot_${profileId}`,
+    profileId,
+    periodStart: "2026-06-01",
+    periodEnd: "2026-06-30",
+    grossSpendMinor: 472_000,
+    refundsMinor: 52_000,
+    netSpendMinor: 420_000,
+    annualizedExpensesMinor: 5_110_000,
+    source: "statement_import",
+  });
+  repositories.transactions.create({
+    id: `transaction_${profileId}`,
+    profileId,
+    accountId: `account_${profileId}`,
+    statementImportId: `import_${profileId}`,
+    postedDate: "2026-06-20",
+    transactionDate: "2026-06-19",
+    descriptionRaw: "GRAB *TRIP SINGAPORE",
+    descriptionNormalized: "grab trip singapore",
+    amountMinor: -1840,
+    currency: "SGD",
+    direction: "debit",
+    transactionKind: "purchase",
+    eligibleForMiles: true,
+    confidenceScore: 0.92,
+    needsReview: true,
+    transactionFingerprint,
+  });
+  repositories.rewardLedger.create({
+    id: `ledger_${profileId}`,
+    profileId,
+    transactionId: `transaction_${profileId}`,
+    ledgerType: "earn",
+    points: 18,
+    milesEquivalent: 7,
+    status: "pending",
+  });
+
+  connection.sqlite
+    .prepare(
+      `INSERT INTO seeded_data_versions (id, dataset_name, dataset_version, source_url, verified_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(
+      `seed_${profileId}`,
+      "mcc_taxonomy",
+      "2026.06",
+      "https://example.test/mcc",
+      "2026-06-25T00:00:00.000Z",
+    );
+}
