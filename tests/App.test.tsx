@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -15,15 +16,25 @@ describe("App shell", () => {
 
   it("switches between mobile tabs", async () => {
     render(<App />);
+    const mobileNav = screen.getByRole("navigation", { name: "Primary" });
 
     for (const tab of ["Home", "Plan", "Transactions", "Cards", "Profile"]) {
-      expect(screen.getByRole("button", { name: tab })).toBeInTheDocument();
+      expect(within(mobileNav).getByRole("button", { name: tab })).toBeInTheDocument();
     }
 
-    await userEvent.click(screen.getByRole("button", { name: "Cards" }));
+    await userEvent.click(within(mobileNav).getByRole("button", { name: "Cards" }));
 
     expect(screen.getByRole("heading", { name: "Miles runway" })).toBeInTheDocument();
-    expect(screen.getByText("48,000 mi")).toBeInTheDocument();
+    expect(within(screen.getByLabelText("Miles summary")).getByText("48,000 mi")).toBeInTheDocument();
     expect(screen.getByText(/S\$50 to next 5,000-point block/i)).toBeInTheDocument();
+  });
+
+  it("renders the desktop dashboard sections", () => {
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: "Command center" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /3 items need confirmation/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Insights")).toBeInTheDocument();
+    expect(screen.getByText(/Matched merchant text/i)).toBeInTheDocument();
   });
 });

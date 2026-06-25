@@ -26,6 +26,7 @@ export function App() {
 
   return (
     <main className="app-frame">
+      <DesktopShell activeTab={activeTab} setActiveTab={setActiveTab} />
       <section className="mobile-shell" aria-label="Wander mobile app">
         <header className="mobile-header">
           <div>
@@ -67,6 +68,117 @@ export function App() {
         </nav>
       </section>
     </main>
+  );
+}
+
+function DesktopShell({
+  activeTab,
+  setActiveTab,
+}: {
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
+}) {
+  return (
+    <section className="desktop-shell" aria-label="Wander desktop dashboard">
+      <aside className="desktop-sidebar" aria-label="Desktop navigation">
+        <div>
+          <p className="eyebrow">Wander</p>
+          <h1>Command center</h1>
+        </div>
+        <nav aria-label="Desktop primary">
+          {tabs.map((tab) => (
+            <button
+              aria-current={activeTab === tab.id ? "page" : undefined}
+              className={activeTab === tab.id ? "active" : ""}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      <section className="desktop-main" aria-labelledby="desktop-title">
+        <div className="desktop-hero">
+          <div>
+            <p className="eyebrow">FIRE dashboard</p>
+            <h2 id="desktop-title">FI at 45, with 49% funded</h2>
+            <p>Scenario, expense, transaction review, and miles impacts in one working surface.</p>
+          </div>
+          <div className="desktop-progress" aria-label="FIRE progress 49 percent">
+            <span>49%</span>
+          </div>
+        </div>
+
+        <section className="review-inbox" aria-labelledby="review-title">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Review inbox</p>
+              <h2 id="review-title">3 items need confirmation</h2>
+            </div>
+            <button type="button">Review all</button>
+          </div>
+          <ReviewRow
+            title="SP Services Utilities"
+            meta="MCC 4900 · Utilities · no miles"
+            impact="Expense snapshot +S$94"
+            diagnostic="Matched merchant text, category confidence 95%"
+            tone="warning"
+          />
+          <ReviewRow
+            title="Grab Trip Singapore"
+            meta="MCC 4121 · Transport · 4 mpd eligible"
+            impact="DBS block needs S$50"
+            diagnostic="Refund matcher found no offset"
+            tone="progress"
+          />
+          <ReviewRow
+            title="Town Council Payment"
+            meta="MCC 9399 · Government · excluded"
+            impact="No miles earned"
+            diagnostic="Learned from prior correction"
+            tone="success"
+          />
+        </section>
+      </section>
+
+      <aside className="desktop-insights" aria-label="Insights">
+        <section>
+          <p className="eyebrow">Plan</p>
+          <h2>Scenario spread</h2>
+          <dl>
+            <div>
+              <dt>Optimistic</dt>
+              <dd>FI 2 years earlier</dd>
+            </div>
+            <div>
+              <dt>Conservative</dt>
+              <dd>Target +S$86K</dd>
+            </div>
+          </dl>
+        </section>
+        <section>
+          <p className="eyebrow">Cards</p>
+          <h2>Miles health</h2>
+          <dl>
+            <div>
+              <dt>Redeemable</dt>
+              <dd>48,000 mi</dd>
+            </div>
+            <div>
+              <dt>Pending</dt>
+              <dd>7,240 mi</dd>
+            </div>
+            <div>
+              <dt>Reversed</dt>
+              <dd>-1,200 mi</dd>
+            </div>
+          </dl>
+        </section>
+      </aside>
+    </section>
   );
 }
 
@@ -161,6 +273,31 @@ function ActionRow({
         <p>{detail}</p>
       </div>
       <span aria-hidden="true">›</span>
+    </article>
+  );
+}
+
+function ReviewRow({
+  title,
+  meta,
+  impact,
+  diagnostic,
+  tone,
+}: {
+  title: string;
+  meta: string;
+  impact: string;
+  diagnostic: string;
+  tone: "success" | "warning" | "progress";
+}) {
+  return (
+    <article className={`review-row ${tone}`}>
+      <div>
+        <h3>{title}</h3>
+        <p>{meta}</p>
+        <span>{diagnostic}</span>
+      </div>
+      <strong>{impact}</strong>
     </article>
   );
 }
