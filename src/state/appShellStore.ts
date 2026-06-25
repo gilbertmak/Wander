@@ -1,13 +1,13 @@
 import { create } from "zustand";
 
-export type ProductSurface = "home" | "cards" | "desktop";
+export type AppTab = "home" | "plan" | "transactions" | "cards" | "profile";
 
 type AppShellState = {
-  activeSurface: ProductSurface;
-  setActiveSurface: (surface: ProductSurface) => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
 };
 
 export const useAppShellStore = create<AppShellState>((set) => ({
-  activeSurface: "home",
-  setActiveSurface: (surface) => set({ activeSurface: surface }),
+  activeTab: "home",
+  setActiveTab: (tab) => set({ activeTab: tab }),
 }));

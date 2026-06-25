@@ -5,20 +5,25 @@ import { describe, expect, it } from "vitest";
 import { App } from "../src/ui/App";
 
 describe("App shell", () => {
-  it("renders the implementation foundation status", () => {
+  it("renders the mobile Home surface", () => {
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: /local-first planning/i })).toBeInTheDocument();
-    expect(screen.getByText("FP-1")).toBeInTheDocument();
-    expect(screen.getByText("FP-1.1")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /FIRE and miles/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "49%" })).toBeInTheDocument();
+    expect(screen.getByText(/Confirm May expense snapshot/i)).toBeInTheDocument();
   });
 
-  it("switches between planned product surfaces", async () => {
+  it("switches between mobile tabs", async () => {
     render(<App />);
 
-    await userEvent.click(screen.getByRole("button", { name: "cards" }));
+    for (const tab of ["Home", "Plan", "Transactions", "Cards", "Profile"]) {
+      expect(screen.getByRole("button", { name: tab })).toBeInTheDocument();
+    }
 
-    expect(screen.getByRole("heading", { name: "Cards And Miles" })).toBeInTheDocument();
-    expect(screen.getByText(/redeemable miles/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cards" }));
+
+    expect(screen.getByRole("heading", { name: "Miles runway" })).toBeInTheDocument();
+    expect(screen.getByText("48,000 mi")).toBeInTheDocument();
+    expect(screen.getByText(/S\$50 to next 5,000-point block/i)).toBeInTheDocument();
   });
 });

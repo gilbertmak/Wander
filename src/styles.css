@@ -178,6 +178,215 @@ h2 {
   color: var(--color-text-secondary);
 }
 
+.app-frame {
+  min-height: 100vh;
+  padding: var(--space-xl);
+}
+
+.mobile-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--space-xl);
+  width: min(100%, 430px);
+  min-height: calc(100vh - 48px);
+  margin: 0 auto;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--color-surface-raised), var(--color-surface-base));
+  box-shadow: var(--shadow-raised);
+  overflow: hidden;
+}
+
+.mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-xl) var(--space-xl) 0;
+}
+
+.mobile-header h1 {
+  max-width: 280px;
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: var(--line-tight);
+}
+
+.profile-chip {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  background: rgba(56, 189, 248, 0.16);
+  color: var(--color-blue-progress);
+  font-weight: 800;
+}
+
+.tab-panels {
+  min-width: 0;
+  padding: 0 var(--space-xl);
+}
+
+.mobile-panel {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.fire-hero,
+.empty-panel,
+.panel-heading {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: rgba(16, 40, 34, 0.72);
+  padding: var(--space-xl);
+}
+
+.fire-hero h2 {
+  margin: 0 0 var(--space-sm);
+  color: var(--color-blue-progress);
+  font-size: 4.25rem;
+  line-height: 0.95;
+}
+
+.fire-hero p,
+.panel-heading p,
+.empty-panel p {
+  margin-bottom: 0;
+  color: var(--color-text-secondary);
+  line-height: var(--line-normal);
+}
+
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.metric-strip article {
+  min-width: 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: rgba(6, 19, 16, 0.68);
+  padding: var(--space-md);
+}
+
+.metric-strip span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-caption);
+}
+
+.metric-strip strong {
+  display: block;
+  margin-top: var(--space-sm);
+  font-size: 1rem;
+}
+
+.metric-strip .progress strong {
+  color: var(--color-blue-progress);
+}
+
+.metric-strip .warning strong {
+  color: var(--color-amber-warning);
+}
+
+.metric-strip .reversal strong {
+  color: var(--color-red-reversal);
+}
+
+.action-list,
+.card-stack {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.action-list article,
+.card-stack article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-height: 64px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: rgba(16, 40, 34, 0.54);
+  padding: var(--space-lg);
+}
+
+.action-list h3,
+.card-stack h3 {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--font-body);
+}
+
+.action-list p,
+.card-stack p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-caption);
+}
+
+.action-list .warning > span {
+  color: var(--color-amber-warning);
+}
+
+.action-list .progress > span {
+  color: var(--color-blue-progress);
+}
+
+.action-list .success > span {
+  color: var(--color-emerald);
+}
+
+.card-stack strong {
+  color: var(--color-gold);
+  white-space: nowrap;
+}
+
+.bottom-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-xs);
+  border-top: 1px solid var(--color-border-subtle);
+  background: rgba(6, 19, 16, 0.94);
+  padding: var(--space-sm);
+}
+
+.bottom-tabs button {
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.bottom-tabs button span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-bottom: 2px;
+  border-radius: var(--radius-pill);
+  background: rgba(183, 201, 192, 0.08);
+  color: var(--color-text-secondary);
+  font-weight: 800;
+}
+
+.bottom-tabs button.active {
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--color-text-primary);
+}
+
+.bottom-tabs button.active span {
+  background: var(--color-blue-progress);
+  color: var(--color-surface-base);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
