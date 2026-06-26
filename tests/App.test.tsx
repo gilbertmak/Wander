@@ -31,6 +31,10 @@ describe("App shell", () => {
     expect(
       within(screen.getByLabelText("Miles summary")).getByText("48,000 mi"),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("Miles leakage monitor")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "860 missed miles this month" }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/S\$50 to next 5,000-point block/i)).toBeInTheDocument();
   });
 

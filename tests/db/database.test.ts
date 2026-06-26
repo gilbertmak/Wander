@@ -19,10 +19,10 @@ describe("SQLite database layer", () => {
     const firstRun = runMigrations(connection);
     const secondRun = runMigrations(connection);
 
-    expect(firstRun.applied).toEqual(["0001", "0002", "0003", "0004", "0005"]);
+    expect(firstRun.applied).toEqual(["0001", "0002", "0003", "0004", "0005", "0006"]);
     expect(firstRun.skipped).toEqual([]);
     expect(secondRun.applied).toEqual([]);
-    expect(secondRun.skipped).toEqual(["0001", "0002", "0003", "0004", "0005"]);
+    expect(secondRun.skipped).toEqual(["0001", "0002", "0003", "0004", "0005", "0006"]);
 
     const tableCount = connection.sqlite
       .prepare(
@@ -68,6 +68,12 @@ describe("SQLite database layer", () => {
       maskedIdentifier: "**** 1234",
       currency: "SGD",
     });
+    connection.sqlite
+      .prepare(
+        `INSERT INTO cards (id, issuer, card_name, network, currency, is_active)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run("card_1", "DBS", "DBS Visa", "Visa", "SGD", 1);
     repositories.expenseSnapshots.create({
       id: "snapshot_1",
       profileId: "profile_1",
@@ -151,6 +157,32 @@ describe("SQLite database layer", () => {
       caveatJson: "[]",
       calculatedAt: "2026-06-26T00:00:00.000Z",
     });
+    repositories.cardPeriodSummaries.create({
+      id: "card_period_1",
+      profileId: "profile_1",
+      cardId: "card_1",
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-30",
+      eligibleSpendMinor: 1840,
+      excludedSpendMinor: 0,
+      capUsedMinor: 1840,
+      milesEarned: 7,
+      milesMissed: 20,
+      confidenceScore: 0.9,
+      calculatedAt: "2026-06-26T00:00:00.000Z",
+    });
+    repositories.milesLeakageItems.create({
+      id: "leakage_1",
+      profileId: "profile_1",
+      transactionId: "transaction_1",
+      cardId: "card_1",
+      periodSummaryId: "card_period_1",
+      reason: "wrong_card",
+      spendMinor: 1840,
+      milesMissed: 20,
+      recoverable: true,
+      confidenceScore: 0.9,
+    });
     repositories.rewardLedger.create({
       id: "ledger_1",
       profileId: "profile_1",
@@ -181,6 +213,8 @@ describe("SQLite database layer", () => {
     expect(repositories.refundTimelines.getByOriginalTransactionId("transaction_1")?.status).toBe(
       "none",
     );
+    expect(repositories.cardPeriodSummaries.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.milesLeakageItems.listForProfile("profile_1")).toHaveLength(1);
     expect(repositories.rewardLedger.listForProfile("profile_1")).toHaveLength(1);
   });
 
