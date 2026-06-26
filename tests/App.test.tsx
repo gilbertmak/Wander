@@ -86,6 +86,8 @@ describe("Epic 2 app shell", () => {
     expect(screen.getByText("Needs review")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Confirm merchant" })).toBeInTheDocument();
     expect(screen.getByLabelText("Confirm merchant actions")).toBeInTheDocument();
+    expect(screen.getByLabelText("Refund tracker timeline")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Apple refund unresolved" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /annual expenses \+S\$6,000/i }),
     ).toBeInTheDocument();

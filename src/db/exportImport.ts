@@ -22,6 +22,7 @@ const tableNames = [
   "transactions",
   "transaction_trust_scores",
   "refund_matches",
+  "refund_timelines",
   "reward_ledger",
   "redemption_programs",
   "seeded_data_versions",

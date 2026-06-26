@@ -47,6 +47,13 @@ const reviewGroups = [
   },
 ];
 
+const refundTimelineEvents = [
+  { label: "Original charge", value: "S$129 · Apple App Store" },
+  { label: "Expected refund", value: "S$129 by 1 Jul" },
+  { label: "Received refund", value: "Pending" },
+  { label: "Miles reversal", value: "-516 mi when received" },
+];
+
 const correctionFields: Array<{ value: CorrectionField; label: string }> = [
   { value: "category", label: "Category" },
   { value: "merchant", label: "Merchant" },
@@ -255,6 +262,7 @@ function DesktopShell({
           <CorrectionPanel />
           <ImpactPreviewPanel preview={sampleImpactPreview} />
           <ReviewGroupPanel />
+          <RefundTimelinePanel />
           <ReviewRow
             title="SP Services Utilities"
             meta="MCC 4900 · Utilities · no miles"
@@ -376,6 +384,28 @@ function ReviewGroupPanel() {
           </div>
         </article>
       ))}
+    </section>
+  );
+}
+
+function RefundTimelinePanel() {
+  return (
+    <section className="refund-timeline" aria-label="Refund tracker timeline">
+      <div className="section-heading compact">
+        <div>
+          <p className="eyebrow">Refund tracker</p>
+          <h3>Apple refund unresolved</h3>
+        </div>
+        <strong>Missing</strong>
+      </div>
+      <ol>
+        {refundTimelineEvents.map((event) => (
+          <li key={event.label}>
+            <span>{event.label}</span>
+            <p>{event.value}</p>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

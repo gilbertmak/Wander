@@ -29,12 +29,13 @@ describe("local data export and import", () => {
     expect(artifact.formatVersion).toBe(exportFormatVersion);
     expect(artifact.app).toEqual({ name: "Wander", exportSource: "local-sqlite" });
     expect(artifact.database.sourceFilesIncluded).toBe(false);
-    expect(artifact.database.migrationIds).toEqual(["0001", "0002", "0003", "0004"]);
+    expect(artifact.database.migrationIds).toEqual(["0001", "0002", "0003", "0004", "0005"]);
     expect(artifact.data.profiles).toHaveLength(1);
     expect(artifact.data.decision_traces).toHaveLength(1);
     expect(artifact.data.statement_imports).toHaveLength(1);
     expect(artifact.data.statement_reconciliations).toHaveLength(1);
     expect(artifact.data.transaction_trust_scores).toHaveLength(1);
+    expect(artifact.data.refund_timelines).toHaveLength(1);
     expect(artifact.data.seeded_data_versions).toHaveLength(1);
 
     const serialized = JSON.stringify(artifact);
@@ -51,7 +52,7 @@ describe("local data export and import", () => {
       const result = importLocalData(target, artifact);
       const repositories = createRepositories(target);
 
-      expect(result.importedTables).toBe(19);
+      expect(result.importedTables).toBe(20);
       expect(repositories.profiles.getById("profile_1")?.name).toBe("Primary");
       expect(
         repositories.statementImports.getByProfileAndHash("profile_1", "hash_1")?.bankName,
@@ -65,6 +66,9 @@ describe("local data export and import", () => {
       expect(
         repositories.transactionTrustScores.getByTransactionId("transaction_profile_1")?.label,
       ).toBe("high_trust");
+      expect(
+        repositories.refundTimelines.getByOriginalTransactionId("transaction_profile_1")?.status,
+      ).toBe("none");
       expect(repositories.decisionTraces.listForSourceRecord("transaction_profile_1")).toHaveLength(
         1,
       );
@@ -243,6 +247,20 @@ function seedSourceDatabase(
     score: 0.91,
     label: "high_trust",
     driverJson: JSON.stringify(["Trust score 91%."]),
+  });
+  repositories.refundTimelines.create({
+    id: `refund_timeline_${profileId}`,
+    profileId,
+    originalTransactionId: `transaction_${profileId}`,
+    status: "none",
+    expectedRefundMinor: 0,
+    receivedRefundMinor: 0,
+    remainingEligibleSpendMinor: 1_840,
+    milesReversal: 0,
+    confidenceScore: 1,
+    eventJson: "[]",
+    caveatJson: "[]",
+    calculatedAt: "2026-06-26T00:00:00.000Z",
   });
   repositories.rewardLedger.create({
     id: `ledger_${profileId}`,
