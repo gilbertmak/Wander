@@ -77,6 +77,8 @@ describe("Epic 2 app shell", () => {
     expect(
       screen.getByRole("heading", { name: "860 missed miles this month" }),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("Plan a purchase")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save planned purchase" })).toBeInTheDocument();
     expect(screen.getByText(/S\$50 to next 5,000-point block/i)).toBeInTheDocument();
   });
 

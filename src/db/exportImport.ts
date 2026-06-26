@@ -25,6 +25,7 @@ const tableNames = [
   "refund_matches",
   "refund_timelines",
   "miles_leakage_items",
+  "planned_purchases",
   "reward_ledger",
   "redemption_programs",
   "seeded_data_versions",

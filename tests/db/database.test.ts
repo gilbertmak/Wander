@@ -19,10 +19,10 @@ describe("SQLite database layer", () => {
     const firstRun = runMigrations(connection);
     const secondRun = runMigrations(connection);
 
-    expect(firstRun.applied).toEqual(["0001", "0002", "0003", "0004", "0005", "0006"]);
+    expect(firstRun.applied).toEqual(["0001", "0002", "0003", "0004", "0005", "0006", "0007"]);
     expect(firstRun.skipped).toEqual([]);
     expect(secondRun.applied).toEqual([]);
-    expect(secondRun.skipped).toEqual(["0001", "0002", "0003", "0004", "0005", "0006"]);
+    expect(secondRun.skipped).toEqual(["0001", "0002", "0003", "0004", "0005", "0006", "0007"]);
 
     const tableCount = connection.sqlite
       .prepare(
@@ -183,6 +183,20 @@ describe("SQLite database layer", () => {
       recoverable: true,
       confidenceScore: 0.9,
     });
+    repositories.plannedPurchases.create({
+      id: "planned_1",
+      profileId: "profile_1",
+      merchantText: "haidilao",
+      mccCode: "5812",
+      amountMinor: 12_000,
+      currency: "SGD",
+      channel: "contactless",
+      plannedDate: "2026-06-28",
+      recommendedCardId: "card_1",
+      status: "planned",
+      confidenceScore: 0.9,
+      caveatJson: "[]",
+    });
     repositories.rewardLedger.create({
       id: "ledger_1",
       profileId: "profile_1",
@@ -215,6 +229,7 @@ describe("SQLite database layer", () => {
     );
     expect(repositories.cardPeriodSummaries.listForProfile("profile_1")).toHaveLength(1);
     expect(repositories.milesLeakageItems.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.plannedPurchases.listForProfile("profile_1")).toHaveLength(1);
     expect(repositories.rewardLedger.listForProfile("profile_1")).toHaveLength(1);
   });
 
