@@ -32,6 +32,7 @@ export const milesLeakageReasonValues = [
   "low_confidence_mcc",
   "missing_card_assignment",
 ] as const;
+export const plannedPurchaseStatusValues = ["planned", "matched", "cancelled"] as const;
 
 const now = sql`CURRENT_TIMESTAMP`;
 
@@ -523,6 +524,38 @@ export const milesLeakageItems = sqliteTable(
   ],
 );
 
+export const plannedPurchases = sqliteTable(
+  "planned_purchases",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    merchantText: text("merchant_text").notNull(),
+    categoryId: text("category_id").references(() => categories.id, { onDelete: "set null" }),
+    mccCode: text("mcc_code"),
+    amountMinor: integer("amount_minor").notNull(),
+    currency: text("currency").notNull().default("SGD"),
+    channel: text("channel").notNull(),
+    plannedDate: text("planned_date").notNull(),
+    recommendedCardId: text("recommended_card_id").references(() => cards.id, {
+      onDelete: "set null",
+    }),
+    status: text("status").notNull().default("planned"),
+    matchedTransactionId: text("matched_transaction_id").references(() => transactions.id, {
+      onDelete: "set null",
+    }),
+    confidenceScore: real("confidence_score").notNull(),
+    caveatJson: text("caveat_json").notNull().default("[]"),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [
+    index("planned_purchases_profile_status_idx").on(table.profileId, table.status),
+    index("planned_purchases_match_idx").on(table.matchedTransactionId),
+  ],
+);
+
 export const rewardLedger = sqliteTable(
   "reward_ledger",
   {
@@ -594,4 +627,5 @@ export const profileRelations = relations(profiles, ({ many, one }) => ({
   refundTimelines: many(refundTimelines),
   cardPeriodSummaries: many(cardPeriodSummaries),
   milesLeakageItems: many(milesLeakageItems),
+  plannedPurchases: many(plannedPurchases),
 }));

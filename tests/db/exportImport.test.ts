@@ -36,6 +36,7 @@ describe("local data export and import", () => {
       "0004",
       "0005",
       "0006",
+      "0007",
     ]);
     expect(artifact.data.profiles).toHaveLength(1);
     expect(artifact.data.decision_traces).toHaveLength(1);
@@ -45,6 +46,7 @@ describe("local data export and import", () => {
     expect(artifact.data.refund_timelines).toHaveLength(1);
     expect(artifact.data.card_period_summaries).toHaveLength(1);
     expect(artifact.data.miles_leakage_items).toHaveLength(1);
+    expect(artifact.data.planned_purchases).toHaveLength(1);
     expect(artifact.data.seeded_data_versions).toHaveLength(1);
 
     const serialized = JSON.stringify(artifact);
@@ -61,7 +63,7 @@ describe("local data export and import", () => {
       const result = importLocalData(target, artifact);
       const repositories = createRepositories(target);
 
-      expect(result.importedTables).toBe(22);
+      expect(result.importedTables).toBe(23);
       expect(repositories.profiles.getById("profile_1")?.name).toBe("Primary");
       expect(
         repositories.statementImports.getByProfileAndHash("profile_1", "hash_1")?.bankName,
@@ -80,6 +82,7 @@ describe("local data export and import", () => {
       ).toBe("none");
       expect(repositories.cardPeriodSummaries.listForProfile("profile_1")).toHaveLength(1);
       expect(repositories.milesLeakageItems.listForProfile("profile_1")).toHaveLength(1);
+      expect(repositories.plannedPurchases.listForProfile("profile_1")).toHaveLength(1);
       expect(repositories.decisionTraces.listForSourceRecord("transaction_profile_1")).toHaveLength(
         1,
       );
@@ -304,6 +307,20 @@ function seedSourceDatabase(
     milesMissed: 20,
     recoverable: true,
     confidenceScore: 0.9,
+  });
+  repositories.plannedPurchases.create({
+    id: `planned_${profileId}`,
+    profileId,
+    merchantText: "haidilao",
+    mccCode: "5812",
+    amountMinor: 12_000,
+    currency: "SGD",
+    channel: "contactless",
+    plannedDate: "2026-06-28",
+    recommendedCardId: `card_${profileId}`,
+    status: "planned",
+    confidenceScore: 0.9,
+    caveatJson: "[]",
   });
   repositories.rewardLedger.create({
     id: `ledger_${profileId}`,
