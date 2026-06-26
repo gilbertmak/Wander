@@ -138,9 +138,9 @@ function seedSourceDatabase(
     currentNetWorthMinor: 110_000_000,
     targetFireNumberMinor: 162_000_000,
     annualExpensesMinor: 5_670_000,
-    safeWithdrawalRate: 0.035,
-    expectedReturnRate: 0.055,
-    inflationRate: 0.025,
+    safeWithdrawalRateBasisPoints: 350,
+    expectedReturnRateBasisPoints: 550,
+    inflationRateBasisPoints: 250,
   });
   repositories.statementImports.create({
     id: `import_${profileId}`,
