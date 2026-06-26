@@ -84,6 +84,8 @@ describe("Epic 2 app shell", () => {
     expect(screen.getByLabelText("Insights")).toBeInTheDocument();
     expect(screen.getByText(/Matched merchant text/i)).toBeInTheDocument();
     expect(screen.getByText("Needs review")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Confirm merchant" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Confirm merchant actions")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /annual expenses \+S\$6,000/i }),
     ).toBeInTheDocument();
@@ -104,5 +106,18 @@ describe("Epic 2 app shell", () => {
     await userEvent.click(within(desktopNav).getByRole("button", { name: "Desktop Dashboard" }));
 
     expect(screen.getByRole("heading", { name: "Desktop Dashboard" })).toBeInTheDocument();
+  });
+
+  it("opens and closes the why-this drawer", async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Why this?" })[0]);
+
+    expect(screen.getByLabelText("Why this explanation")).toBeInTheDocument();
+    expect(screen.getByText(/trust_score · merchant_resolver/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(screen.queryByLabelText("Why this explanation")).not.toBeInTheDocument();
   });
 });

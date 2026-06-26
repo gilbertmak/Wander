@@ -29,8 +29,9 @@ describe("local data export and import", () => {
     expect(artifact.formatVersion).toBe(exportFormatVersion);
     expect(artifact.app).toEqual({ name: "Wander", exportSource: "local-sqlite" });
     expect(artifact.database.sourceFilesIncluded).toBe(false);
-    expect(artifact.database.migrationIds).toEqual(["0001", "0002"]);
+    expect(artifact.database.migrationIds).toEqual(["0001", "0002", "0003", "0004"]);
     expect(artifact.data.profiles).toHaveLength(1);
+    expect(artifact.data.decision_traces).toHaveLength(1);
     expect(artifact.data.statement_imports).toHaveLength(1);
     expect(artifact.data.statement_reconciliations).toHaveLength(1);
     expect(artifact.data.transaction_trust_scores).toHaveLength(1);
@@ -50,7 +51,7 @@ describe("local data export and import", () => {
       const result = importLocalData(target, artifact);
       const repositories = createRepositories(target);
 
-      expect(result.importedTables).toBe(18);
+      expect(result.importedTables).toBe(19);
       expect(repositories.profiles.getById("profile_1")?.name).toBe("Primary");
       expect(
         repositories.statementImports.getByProfileAndHash("profile_1", "hash_1")?.bankName,
@@ -64,6 +65,9 @@ describe("local data export and import", () => {
       expect(
         repositories.transactionTrustScores.getByTransactionId("transaction_profile_1")?.label,
       ).toBe("high_trust");
+      expect(repositories.decisionTraces.listForSourceRecord("transaction_profile_1")).toHaveLength(
+        1,
+      );
 
       const seededVersion = target.sqlite
         .prepare("SELECT dataset_version FROM seeded_data_versions WHERE dataset_name = ?")
@@ -199,6 +203,19 @@ function seedSourceDatabase(
     confidenceScore: 0.92,
     needsReview: true,
     transactionFingerprint,
+  });
+  repositories.decisionTraces.create({
+    id: `trace_${profileId}`,
+    profileId,
+    sourceModule: "trust_score",
+    sourceRecordId: `transaction_${profileId}`,
+    sourceRecordIdsJson: JSON.stringify([`transaction_${profileId}`]),
+    ruleVersion: "trust-v1",
+    inputFactsJson: JSON.stringify({ parserConfidence: 0.92 }),
+    outputValueJson: JSON.stringify({ label: "high_trust" }),
+    confidenceScore: 0.91,
+    explanationText: "Trust score uses parser confidence.",
+    caveatJson: "[]",
   });
   repositories.statementReconciliations.create({
     id: `reconciliation_${profileId}`,

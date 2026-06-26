@@ -33,14 +33,24 @@ describe("merchant learning loop", () => {
       correctedAt: "2026-06-25T01:00:00.000Z",
     });
 
-    expect(connection.db.select().from(merchants).where(eq(merchants.id, learned.merchant.id)).get()).toMatchObject({
+    expect(
+      connection.db.select().from(merchants).where(eq(merchants.id, learned.merchant.id)).get(),
+    ).toMatchObject({
       canonicalName: "Blue Bottle Coffee",
       defaultCategoryId: "category_dining",
     });
     expect(
-      connection.db.select().from(merchantHeuristics).where(eq(merchantHeuristics.id, learned.heuristic.id)).get(),
+      connection.db
+        .select()
+        .from(merchantHeuristics)
+        .where(eq(merchantHeuristics.id, learned.heuristic.id))
+        .get(),
     ).toMatchObject({
+      aliasText: "blue bottle coffee singapore",
       categoryId: "category_dining",
+      categoryOverrideId: "category_dining",
+      sourceTransactionId: "transaction_1",
+      ruleVersion: "user-v1",
       source: "user_correction",
       confidenceScore: 0.88,
     });
@@ -103,10 +113,38 @@ describe("merchant learning loop", () => {
     expect(second.heuristic.id).toBe(first.heuristic.id);
     expect(connection.db.select().from(merchantHeuristics).all()).toHaveLength(1);
     expect(
-      connection.db.select().from(merchantHeuristics).where(eq(merchantHeuristics.id, first.heuristic.id)).get(),
+      connection.db
+        .select()
+        .from(merchantHeuristics)
+        .where(eq(merchantHeuristics.id, first.heuristic.id))
+        .get(),
     ).toMatchObject({
       confidenceScore: 0.91,
       verifiedAt: "2026-06-25T04:00:00.000Z",
+      sourceTransactionId: "transaction_4",
+    });
+  });
+
+  it("prioritizes learned local rules over seeded heuristics", () => {
+    const learnedGrab = learnMerchantHeuristic(connection, {
+      transactionId: "transaction_7",
+      descriptionNormalized: "grab",
+      correctedMccCode: "5814",
+      merchantId: "merchant_grabfood",
+      canonicalMerchantName: "GrabFood",
+      confidenceScore: 0.8,
+      correctedAt: "2026-06-25T05:00:00.000Z",
+    });
+
+    expect(
+      resolveMerchant("GRAB *TRIP SINGAPORE", {
+        merchantRecords: merchantSeeds,
+        heuristicRecords: [...merchantHeuristicSeeds, learnedGrab.heuristic],
+      }),
+    ).toMatchObject({
+      canonicalName: "GrabFood",
+      mccCode: "5814",
+      source: "user_correction",
     });
   });
 

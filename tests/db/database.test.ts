@@ -19,10 +19,10 @@ describe("SQLite database layer", () => {
     const firstRun = runMigrations(connection);
     const secondRun = runMigrations(connection);
 
-    expect(firstRun.applied).toEqual(["0001", "0002"]);
+    expect(firstRun.applied).toEqual(["0001", "0002", "0003", "0004"]);
     expect(firstRun.skipped).toEqual([]);
     expect(secondRun.applied).toEqual([]);
-    expect(secondRun.skipped).toEqual(["0001", "0002"]);
+    expect(secondRun.skipped).toEqual(["0001", "0002", "0003", "0004"]);
 
     const tableCount = connection.sqlite
       .prepare(
@@ -78,6 +78,19 @@ describe("SQLite database layer", () => {
       netSpendMinor: 420_000,
       annualizedExpensesMinor: 5_110_000,
       source: "statement_import",
+    });
+    repositories.decisionTraces.create({
+      id: "trace_1",
+      profileId: "profile_1",
+      sourceModule: "trust_score",
+      sourceRecordId: "transaction_1",
+      sourceRecordIdsJson: JSON.stringify(["transaction_1"]),
+      ruleVersion: "trust-v1",
+      inputFactsJson: JSON.stringify({ parserConfidence: 0.92 }),
+      outputValueJson: JSON.stringify({ label: "high_trust" }),
+      confidenceScore: 0.91,
+      explanationText: "Trust score uses parser confidence.",
+      caveatJson: "[]",
     });
     repositories.transactions.create({
       id: "transaction_1",
@@ -143,6 +156,7 @@ describe("SQLite database layer", () => {
     );
     expect(repositories.accounts.listForProfile("profile_1")).toHaveLength(1);
     expect(repositories.expenseSnapshots.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.decisionTraces.listForSourceRecord("transaction_1")).toHaveLength(1);
     expect(repositories.transactions.listReviewItems("profile_1")).toHaveLength(1);
     expect(repositories.statementReconciliations.getByImportId("import_1")?.status).toBe(
       "verified",

@@ -23,6 +23,11 @@ export type MerchantHeuristicSeed = {
   categoryId?: string | null;
   confidenceScore: number;
   source: "seed" | "user_correction";
+  aliasText?: string | null;
+  categoryOverrideId?: string | null;
+  mccOverrideId?: string | null;
+  sourceTransactionId?: string | null;
+  ruleVersion?: string;
   verifiedAt?: string;
 };
 
@@ -200,9 +205,33 @@ export const merchantSeeds: MerchantSeed[] = [
 ];
 
 export const merchantHeuristicSeeds: MerchantHeuristicSeed[] = [
-  heuristic("heuristic_grab", "merchant_grab", "contains", "grab", "mcc_4121", "category_transport", 0.92),
-  heuristic("heuristic_grab_trip", "merchant_grab", "contains", "grab trip", "mcc_4121", "category_transport", 0.96),
-  heuristic("heuristic_grabfood", "merchant_grabfood", "contains", "grabfood", "mcc_5814", "category_dining", 0.97),
+  heuristic(
+    "heuristic_grab",
+    "merchant_grab",
+    "contains",
+    "grab",
+    "mcc_4121",
+    "category_transport",
+    0.92,
+  ),
+  heuristic(
+    "heuristic_grab_trip",
+    "merchant_grab",
+    "contains",
+    "grab trip",
+    "mcc_4121",
+    "category_transport",
+    0.96,
+  ),
+  heuristic(
+    "heuristic_grabfood",
+    "merchant_grabfood",
+    "contains",
+    "grabfood",
+    "mcc_5814",
+    "category_dining",
+    0.97,
+  ),
   heuristic(
     "heuristic_fairprice",
     "merchant_fairprice",
@@ -257,8 +286,24 @@ export const merchantHeuristicSeeds: MerchantHeuristicSeed[] = [
     "category_dining",
     0.93,
   ),
-  heuristic("heuristic_shopee", "merchant_shopee", "contains", "shopee", "mcc_5311", "category_shopping", 0.9),
-  heuristic("heuristic_lazada", "merchant_lazada", "contains", "lazada", "mcc_5311", "category_shopping", 0.9),
+  heuristic(
+    "heuristic_shopee",
+    "merchant_shopee",
+    "contains",
+    "shopee",
+    "mcc_5311",
+    "category_shopping",
+    0.9,
+  ),
+  heuristic(
+    "heuristic_lazada",
+    "merchant_lazada",
+    "contains",
+    "lazada",
+    "mcc_5311",
+    "category_shopping",
+    0.9,
+  ),
   heuristic(
     "heuristic_apple_bill",
     "merchant_apple",
@@ -277,7 +322,15 @@ export const merchantHeuristicSeeds: MerchantHeuristicSeed[] = [
     "category_digital_services",
     0.9,
   ),
-  heuristic("heuristic_shell", "merchant_shell", "contains", "shell", "mcc_5541", "category_transport", 0.9),
+  heuristic(
+    "heuristic_shell",
+    "merchant_shell",
+    "contains",
+    "shell",
+    "mcc_5541",
+    "category_transport",
+    0.9,
+  ),
   heuristic(
     "heuristic_singapore_airlines",
     "merchant_singapore_airlines",
@@ -305,7 +358,15 @@ export const merchantHeuristicSeeds: MerchantHeuristicSeed[] = [
     "category_utilities",
     0.95,
   ),
-  heuristic("heuristic_axs", "merchant_axs", "prefix", "axs", "mcc_9399", "category_government", 0.86),
+  heuristic(
+    "heuristic_axs",
+    "merchant_axs",
+    "prefix",
+    "axs",
+    "mcc_9399",
+    "category_government",
+    0.86,
+  ),
   heuristic(
     "heuristic_ntuc_income",
     "merchant_ntuc_income",
@@ -315,10 +376,42 @@ export const merchantHeuristicSeeds: MerchantHeuristicSeed[] = [
     "category_insurance",
     0.94,
   ),
-  heuristic("heuristic_clinic", "merchant_clinic", "regex", "\\b(clinic|hospital)\\b", "mcc_8062", "category_healthcare", 0.86),
-  heuristic("heuristic_iras", "merchant_iras", "contains", "iras", "mcc_9399", "category_government", 0.96),
-  heuristic("heuristic_school_fees", "merchant_school", "contains", "school fee", "mcc_8211", "category_education", 0.86),
-  heuristic("heuristic_cardup", "merchant_cardup", "contains", "cardup", "mcc_6012", "category_financial_services", 0.9),
+  heuristic(
+    "heuristic_clinic",
+    "merchant_clinic",
+    "regex",
+    "\\b(clinic|hospital)\\b",
+    "mcc_8062",
+    "category_healthcare",
+    0.86,
+  ),
+  heuristic(
+    "heuristic_iras",
+    "merchant_iras",
+    "contains",
+    "iras",
+    "mcc_9399",
+    "category_government",
+    0.96,
+  ),
+  heuristic(
+    "heuristic_school_fees",
+    "merchant_school",
+    "contains",
+    "school fee",
+    "mcc_8211",
+    "category_education",
+    0.86,
+  ),
+  heuristic(
+    "heuristic_cardup",
+    "merchant_cardup",
+    "contains",
+    "cardup",
+    "mcc_6012",
+    "category_financial_services",
+    0.9,
+  ),
   heuristic(
     "heuristic_credit_card_payment",
     "merchant_credit_card_payment",
@@ -335,7 +428,9 @@ export type SeedMerchantHeuristicsResult = {
   heuristicsSeeded: number;
 };
 
-export function seedMerchantHeuristics(connection: DatabaseConnection): SeedMerchantHeuristicsResult {
+export function seedMerchantHeuristics(
+  connection: DatabaseConnection,
+): SeedMerchantHeuristicsResult {
   seedMccTaxonomy(connection);
 
   connection.sqlite.transaction(() => {
@@ -369,6 +464,11 @@ export function seedMerchantHeuristics(connection: DatabaseConnection): SeedMerc
             categoryId: rule.categoryId,
             confidenceScore: rule.confidenceScore,
             source: rule.source,
+            aliasText: rule.aliasText,
+            categoryOverrideId: rule.categoryOverrideId,
+            mccOverrideId: rule.mccOverrideId,
+            sourceTransactionId: rule.sourceTransactionId,
+            ruleVersion: rule.ruleVersion ?? "seed-v1",
             verifiedAt: rule.verifiedAt,
           },
         })
@@ -412,7 +512,7 @@ export function resolveMerchant(
     mccCode: mcc?.code,
     confidenceScore: match.confidenceScore,
     source: match.source,
-    explanation: `Matched ${merchant.canonicalName} using ${match.patternType} pattern "${match.patternValue}".`,
+    explanation: `Matched ${merchant.canonicalName} using ${match.source === "user_correction" ? "local" : "seed"} ${match.patternType} pattern "${match.patternValue}".`,
   };
 }
 
@@ -425,7 +525,11 @@ export function getSeededHeuristicById(connection: DatabaseConnection, id: strin
 }
 
 export function normalizeMerchantText(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 function heuristic(
@@ -446,6 +550,7 @@ function heuristic(
     categoryId,
     confidenceScore,
     source: "seed",
+    ruleVersion: "seed-v1",
     verifiedAt: "2026-06-25",
   };
 }
@@ -463,12 +568,24 @@ function matchesPattern(normalizedDescription: string, rule: MerchantHeuristicSe
   }
 }
 
-function compareHeuristicMatches(left: MerchantHeuristicSeed, right: MerchantHeuristicSeed): number {
+function compareHeuristicMatches(
+  left: MerchantHeuristicSeed,
+  right: MerchantHeuristicSeed,
+): number {
+  const sourceDelta = sourcePriority(right.source) - sourcePriority(left.source);
+  if (sourceDelta !== 0) {
+    return sourceDelta;
+  }
+
   if (right.confidenceScore !== left.confidenceScore) {
     return right.confidenceScore - left.confidenceScore;
   }
 
   return right.patternValue.length - left.patternValue.length;
+}
+
+function sourcePriority(source: MerchantHeuristicSeed["source"]) {
+  return source === "user_correction" ? 2 : 1;
 }
 
 export function getMccSeedForMerchantResolution(mccCode: string): MccSeed | undefined {

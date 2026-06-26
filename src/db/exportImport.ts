@@ -9,6 +9,7 @@ const tableNames = [
   "profiles",
   "planner_profiles",
   "expense_snapshots",
+  "decision_traces",
   "statement_imports",
   "statement_reconciliations",
   "accounts",

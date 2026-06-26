@@ -26,6 +26,27 @@ const cardMetrics = [
   { label: "Reversed", value: "-1,200 mi", tone: "reversal" },
 ];
 
+const reviewGroups = [
+  {
+    label: "Confirm merchant",
+    count: 2,
+    amount: "S$188",
+    detail: "Local aliases improve future imports.",
+  },
+  {
+    label: "Confirm MCC",
+    count: 1,
+    amount: "S$94",
+    detail: "Miles calculation waits for merchant category code confidence.",
+  },
+  {
+    label: "Assign card",
+    count: 1,
+    amount: "S$36",
+    detail: "Card assignment unlocks earn and cap checks.",
+  },
+];
+
 const correctionFields: Array<{ value: CorrectionField; label: string }> = [
   { value: "category", label: "Category" },
   { value: "merchant", label: "Merchant" },
@@ -187,6 +208,8 @@ function DesktopShell({
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
 }) {
+  const [whyOpen, setWhyOpen] = useState(false);
+
   return (
     <section className="desktop-shell" aria-label="Wander desktop dashboard">
       <aside className="desktop-sidebar" aria-label="Desktop navigation">
@@ -231,11 +254,13 @@ function DesktopShell({
           </div>
           <CorrectionPanel />
           <ImpactPreviewPanel preview={sampleImpactPreview} />
+          <ReviewGroupPanel />
           <ReviewRow
             title="SP Services Utilities"
             meta="MCC 4900 · Utilities · no miles"
             impact="Expense snapshot +S$94"
             diagnostic="Matched merchant text, category confidence 95%"
+            onExplain={() => setWhyOpen(true)}
             trustLabel="Medium trust"
             tone="warning"
           />
@@ -244,6 +269,7 @@ function DesktopShell({
             meta="MCC 4121 · Transport · 4 mpd eligible"
             impact="DBS block needs S$50"
             diagnostic="Refund matcher found no offset"
+            onExplain={() => setWhyOpen(true)}
             trustLabel="High trust"
             tone="progress"
           />
@@ -252,6 +278,7 @@ function DesktopShell({
             meta="MCC 9399 · Government · excluded"
             impact="No miles earned"
             diagnostic="Learned from prior correction"
+            onExplain={() => setWhyOpen(true)}
             trustLabel="Needs review"
             tone="success"
           />
@@ -292,6 +319,7 @@ function DesktopShell({
           </dl>
         </section>
       </aside>
+      {whyOpen && <WhyThisDrawer onClose={() => setWhyOpen(false)} />}
     </section>
   );
 }
@@ -326,6 +354,60 @@ function ImpactPreviewPanel({ preview }: { preview: ImpactPreview }) {
         </div>
       </dl>
     </section>
+  );
+}
+
+function ReviewGroupPanel() {
+  return (
+    <section className="review-groups" aria-label="Grouped review queue">
+      {reviewGroups.map((group) => (
+        <article key={group.label}>
+          <div>
+            <span>{group.count} open</span>
+            <h3>{group.label}</h3>
+            <p>
+              {group.amount} impact · {group.detail}
+            </p>
+          </div>
+          <div className="review-actions" aria-label={`${group.label} actions`}>
+            <button type="button">Accept</button>
+            <button type="button">Edit</button>
+            <button type="button">Ignore</button>
+          </div>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function WhyThisDrawer({ onClose }: { onClose: () => void }) {
+  return (
+    <aside className="why-drawer" aria-label="Why this explanation">
+      <div>
+        <p className="eyebrow">Why this?</p>
+        <h2>Medium trust</h2>
+        <p>
+          Parser confidence, merchant match, MCC confidence, and reconciliation status were used.
+        </p>
+      </div>
+      <dl>
+        <div>
+          <dt>Rules fired</dt>
+          <dd>trust_score · merchant_resolver</dd>
+        </div>
+        <div>
+          <dt>Caveats</dt>
+          <dd>Statement balances unavailable for this import.</dd>
+        </div>
+        <div>
+          <dt>Linked records</dt>
+          <dd>transaction_sp_services</dd>
+        </div>
+      </dl>
+      <button onClick={onClose} type="button">
+        Close
+      </button>
+    </aside>
   );
 }
 
@@ -550,6 +632,7 @@ function ReviewRow({
   meta,
   impact,
   diagnostic,
+  onExplain,
   trustLabel,
   tone,
 }: {
@@ -557,6 +640,7 @@ function ReviewRow({
   meta: string;
   impact: string;
   diagnostic: string;
+  onExplain: () => void;
   trustLabel: string;
   tone: "success" | "warning" | "progress";
 }) {
@@ -567,6 +651,9 @@ function ReviewRow({
         <p>{meta}</p>
         <span className="trust-badge">{trustLabel}</span>
         <span>{diagnostic}</span>
+        <button className="why-link" onClick={onExplain} type="button">
+          Why this?
+        </button>
       </div>
       <strong>{impact}</strong>
     </article>

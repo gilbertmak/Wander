@@ -6,17 +6,21 @@ describe("review inbox model", () => {
   it("creates review items for category, MCC, refund, and miles exceptions", () => {
     const items = createReviewItems({
       transactionId: "transaction_1",
+      needsMerchant: true,
       needsCategory: true,
       needsMcc: true,
       needsRefundMatch: true,
+      needsCard: true,
       hasMilesException: true,
       confidenceScore: 0.61,
     });
 
     expect(items.map((item) => item.reason)).toEqual([
+      "merchant",
       "category",
       "mcc",
       "refund_match",
+      "card",
       "miles_exception",
     ]);
     expect(items.every((item) => item.status === "open")).toBe(true);
@@ -40,7 +44,10 @@ describe("review inbox model", () => {
       action: "accept",
       nextValue: "purchase_1",
     });
-    expect(result.recalculationTriggers).toEqual(["refund_match_changed", "miles_eligibility_changed"]);
+    expect(result.recalculationTriggers).toEqual([
+      "refund_match_changed",
+      "miles_eligibility_changed",
+    ]);
   });
 
   it("edits a category review item and emits category recalculation", () => {
@@ -53,7 +60,11 @@ describe("review inbox model", () => {
       confidenceScore: 0.5,
     });
 
-    const result = applyReviewAction({ ...item, currentValue: "uncategorized" }, "edit", "transport");
+    const result = applyReviewAction(
+      { ...item, currentValue: "uncategorized" },
+      "edit",
+      "transport",
+    );
 
     expect(result.item).toMatchObject({
       status: "edited",
@@ -79,6 +90,26 @@ describe("review inbox model", () => {
     const result = applyReviewAction(item, "reject");
 
     expect(result.item.status).toBe("rejected");
+    expect(result.recalculationTriggers).toEqual([]);
+  });
+
+  it("ignores a review item without creating future recalculation work", () => {
+    const [item] = createReviewItems({
+      transactionId: "transaction_1",
+      needsCategory: false,
+      needsMcc: true,
+      needsRefundMatch: false,
+      hasMilesException: false,
+      confidenceScore: 0.4,
+    });
+
+    const result = applyReviewAction(item, "ignore");
+
+    expect(result.item.status).toBe("ignored");
+    expect(result.correctionEvent).toMatchObject({
+      action: "ignore",
+      nextValue: undefined,
+    });
     expect(result.recalculationTriggers).toEqual([]);
   });
 });
