@@ -222,6 +222,13 @@ export const merchantHeuristics = sqliteTable(
     categoryId: text("category_id").references(() => categories.id, { onDelete: "set null" }),
     confidenceScore: real("confidence_score").notNull(),
     source: text("source").notNull(),
+    aliasText: text("alias_text"),
+    categoryOverrideId: text("category_override_id").references(() => categories.id, {
+      onDelete: "set null",
+    }),
+    mccOverrideId: text("mcc_override_id").references(() => mccCodes.id, { onDelete: "set null" }),
+    sourceTransactionId: text("source_transaction_id"),
+    ruleVersion: text("rule_version").notNull().default("seed-v1"),
     verifiedAt: text("verified_at"),
     createdAt: text("created_at").notNull().default(now),
     updatedAt: text("updated_at").notNull().default(now),
@@ -229,6 +236,8 @@ export const merchantHeuristics = sqliteTable(
   (table) => [
     index("merchant_heuristics_pattern_idx").on(table.patternType, table.patternValue),
     index("merchant_heuristics_merchant_idx").on(table.merchantId),
+    index("merchant_heuristics_source_priority_idx").on(table.source, table.confidenceScore),
+    index("merchant_heuristics_source_transaction_idx").on(table.sourceTransactionId),
   ],
 );
 

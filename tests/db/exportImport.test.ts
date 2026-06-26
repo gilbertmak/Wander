@@ -29,7 +29,7 @@ describe("local data export and import", () => {
     expect(artifact.formatVersion).toBe(exportFormatVersion);
     expect(artifact.app).toEqual({ name: "Wander", exportSource: "local-sqlite" });
     expect(artifact.database.sourceFilesIncluded).toBe(false);
-    expect(artifact.database.migrationIds).toEqual(["0001", "0002"]);
+    expect(artifact.database.migrationIds).toEqual(["0001", "0002", "0003"]);
     expect(artifact.data.profiles).toHaveLength(1);
     expect(artifact.data.statement_imports).toHaveLength(1);
     expect(artifact.data.statement_reconciliations).toHaveLength(1);

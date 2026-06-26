@@ -16,6 +16,7 @@ export type MerchantCorrectionInput = {
   correctedMccCode?: string;
   merchantId?: string;
   canonicalMerchantName?: string;
+  ruleVersion?: string;
   confidenceScore?: number;
   correctedAt?: string;
 };
@@ -60,6 +61,11 @@ export function learnMerchantHeuristic(
     patternValue: normalizedDescription,
     categoryId: correction.correctedCategoryId ?? correctedMcc?.defaultCategoryId ?? null,
     mccId: correctedMcc?.id ?? null,
+    aliasText: normalizedDescription,
+    categoryOverrideId: correction.correctedCategoryId ?? correctedMcc?.defaultCategoryId ?? null,
+    mccOverrideId: correctedMcc?.id ?? null,
+    sourceTransactionId: correction.transactionId,
+    ruleVersion: correction.ruleVersion ?? "user-v1",
     confidenceScore: correction.confidenceScore ?? 0.82,
     source: "user_correction",
     verifiedAt: correction.correctedAt ?? new Date().toISOString(),
@@ -93,6 +99,11 @@ export function learnMerchantHeuristic(
           categoryId: heuristic.categoryId,
           confidenceScore: heuristic.confidenceScore,
           source: heuristic.source,
+          aliasText: heuristic.aliasText,
+          categoryOverrideId: heuristic.categoryOverrideId,
+          mccOverrideId: heuristic.mccOverrideId,
+          sourceTransactionId: heuristic.sourceTransactionId,
+          ruleVersion: heuristic.ruleVersion,
           verifiedAt: heuristic.verifiedAt,
         },
       })

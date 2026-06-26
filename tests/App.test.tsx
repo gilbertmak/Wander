@@ -42,6 +42,8 @@ describe("App shell", () => {
     expect(screen.getByLabelText("Insights")).toBeInTheDocument();
     expect(screen.getByText(/Matched merchant text/i)).toBeInTheDocument();
     expect(screen.getByText("Needs review")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Confirm merchant" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Confirm merchant actions")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /annual expenses \+S\$6,000/i }),
     ).toBeInTheDocument();

@@ -19,10 +19,10 @@ describe("SQLite database layer", () => {
     const firstRun = runMigrations(connection);
     const secondRun = runMigrations(connection);
 
-    expect(firstRun.applied).toEqual(["0001", "0002"]);
+    expect(firstRun.applied).toEqual(["0001", "0002", "0003"]);
     expect(firstRun.skipped).toEqual([]);
     expect(secondRun.applied).toEqual([]);
-    expect(secondRun.skipped).toEqual(["0001", "0002"]);
+    expect(secondRun.skipped).toEqual(["0001", "0002", "0003"]);
 
     const tableCount = connection.sqlite
       .prepare(

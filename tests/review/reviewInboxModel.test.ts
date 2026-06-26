@@ -27,10 +27,14 @@ const baseTransaction: ReviewTransaction = {
 describe("review inbox model", () => {
   it("derives every review row status", () => {
     expect(deriveReviewRowStatus(baseTransaction, [])).toBe("clean");
+    expect(deriveReviewRowStatus({ ...baseTransaction, merchantId: null }, [])).toBe(
+      "needs_merchant",
+    );
     expect(deriveReviewRowStatus({ ...baseTransaction, categoryId: null }, [])).toBe(
       "needs_category",
     );
     expect(deriveReviewRowStatus({ ...baseTransaction, mccCode: null }, [])).toBe("needs_mcc");
+    expect(deriveReviewRowStatus({ ...baseTransaction, cardId: null }, [])).toBe("needs_card");
     expect(deriveReviewRowStatus(baseTransaction, ["refund_match"])).toBe("refund_match_review");
     expect(deriveReviewRowStatus(baseTransaction, ["miles_exception", "category"])).toBe(
       "miles_exception",
@@ -97,8 +101,10 @@ describe("review inbox model", () => {
     ]);
     expect(model.summary).toEqual({
       clean: 1,
+      needs_merchant: 0,
       needs_category: 1,
       needs_mcc: 0,
+      needs_card: 0,
       refund_match_review: 1,
       miles_exception: 1,
       total: 4,
@@ -135,6 +141,12 @@ describe("review inbox model", () => {
       state: "empty",
       summary: {
         clean: 1,
+        needs_merchant: 0,
+        needs_category: 0,
+        needs_mcc: 0,
+        needs_card: 0,
+        refund_match_review: 0,
+        miles_exception: 0,
         total: 1,
         actionable: 0,
       },
@@ -152,10 +164,55 @@ describe("review inbox model", () => {
       ]),
     ).toMatchObject({
       clean: 1,
+      needs_merchant: 0,
+      needs_category: 0,
       needs_mcc: 1,
+      needs_card: 0,
+      refund_match_review: 0,
+      miles_exception: 0,
       total: 2,
       actionable: 1,
     });
+  });
+
+  it("groups review rows by action and sorts by trust before financial impact", () => {
+    const model = buildReviewInboxModel({
+      transactions: [
+        {
+          ...baseTransaction,
+          id: "transaction_merchant_low",
+          merchantId: null,
+          amountMinor: -1000,
+          trustLabel: "needs_review",
+        },
+        {
+          ...baseTransaction,
+          id: "transaction_merchant_high_amount",
+          merchantId: null,
+          amountMinor: -50_000,
+          trustLabel: "high_trust",
+        },
+        {
+          ...baseTransaction,
+          id: "transaction_card",
+          cardId: null,
+          amountMinor: -20_000,
+        },
+      ],
+      reviewItems: [],
+    });
+
+    expect(model.groups.map((group) => group.label)).toEqual(["Confirm merchant", "Assign card"]);
+    expect(model.groups[0]).toMatchObject({
+      actionGroup: "confirm_merchant",
+      openCount: 2,
+      totalAmountMinor: 51_000,
+    });
+    expect(model.groups[0].rows.map((row) => row.transactionId)).toEqual([
+      "transaction_merchant_low",
+      "transaction_merchant_high_amount",
+    ]);
+    expect(model.groups[0].rows[0].availableActions).toEqual(["accept", "edit", "ignore"]);
   });
 
   it("sorts lower trust rows first within the same review status", () => {

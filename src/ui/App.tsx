@@ -25,6 +25,27 @@ const cardMetrics = [
   { label: "Reversed", value: "-1,200 mi", tone: "reversal" },
 ];
 
+const reviewGroups = [
+  {
+    label: "Confirm merchant",
+    count: 2,
+    amount: "S$188",
+    detail: "Local aliases improve future imports.",
+  },
+  {
+    label: "Confirm MCC",
+    count: 1,
+    amount: "S$94",
+    detail: "Miles calculation waits for merchant category code confidence.",
+  },
+  {
+    label: "Assign card",
+    count: 1,
+    amount: "S$36",
+    detail: "Card assignment unlocks earn and cap checks.",
+  },
+];
+
 const correctionFields: Array<{ value: CorrectionField; label: string }> = [
   { value: "category", label: "Category" },
   { value: "merchant", label: "Merchant" },
@@ -179,6 +200,7 @@ function DesktopShell({
           </div>
           <CorrectionPanel />
           <ImpactPreviewPanel preview={sampleImpactPreview} />
+          <ReviewGroupPanel />
           <ReviewRow
             title="SP Services Utilities"
             meta="MCC 4900 · Utilities · no miles"
@@ -273,6 +295,29 @@ function ImpactPreviewPanel({ preview }: { preview: ImpactPreview }) {
           <dd>{preview.milesDelta > 0 ? `+${preview.milesDelta}` : preview.milesDelta}</dd>
         </div>
       </dl>
+    </section>
+  );
+}
+
+function ReviewGroupPanel() {
+  return (
+    <section className="review-groups" aria-label="Grouped review queue">
+      {reviewGroups.map((group) => (
+        <article key={group.label}>
+          <div>
+            <span>{group.count} open</span>
+            <h3>{group.label}</h3>
+            <p>
+              {group.amount} impact · {group.detail}
+            </p>
+          </div>
+          <div className="review-actions" aria-label={`${group.label} actions`}>
+            <button type="button">Accept</button>
+            <button type="button">Edit</button>
+            <button type="button">Ignore</button>
+          </div>
+        </article>
+      ))}
     </section>
   );
 }

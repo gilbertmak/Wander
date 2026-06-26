@@ -602,6 +602,58 @@ h2 {
   font-weight: 800;
 }
 
+.review-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.review-groups article {
+  display: grid;
+  gap: var(--space-md);
+  min-width: 0;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: var(--radius-md);
+  background: rgba(56, 189, 248, 0.07);
+  padding: var(--space-lg);
+}
+
+.review-groups span {
+  color: var(--color-blue-progress);
+  font-size: var(--font-caption);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.review-groups h3 {
+  margin: var(--space-xs) 0;
+  font-size: var(--font-body);
+}
+
+.review-groups p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-caption);
+}
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.review-actions button {
+  min-height: 32px;
+  border: 1px solid rgba(242, 201, 76, 0.24);
+  border-radius: var(--radius-pill);
+  background: rgba(242, 201, 76, 0.08);
+  color: var(--color-gold);
+  padding: 0 var(--space-md);
+  font-size: var(--font-caption);
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .review-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -733,5 +785,9 @@ h2 {
 
   .impact-preview dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-groups {
+    grid-template-columns: 1fr;
   }
 }
