@@ -19,10 +19,10 @@ describe("SQLite database layer", () => {
     const firstRun = runMigrations(connection);
     const secondRun = runMigrations(connection);
 
-    expect(firstRun.applied).toEqual(["0001", "0002", "0003", "0004"]);
+    expect(firstRun.applied).toEqual(["0001", "0002", "0003", "0004", "0005"]);
     expect(firstRun.skipped).toEqual([]);
     expect(secondRun.applied).toEqual([]);
-    expect(secondRun.skipped).toEqual(["0001", "0002", "0003", "0004"]);
+    expect(secondRun.skipped).toEqual(["0001", "0002", "0003", "0004", "0005"]);
 
     const tableCount = connection.sqlite
       .prepare(
@@ -137,6 +137,20 @@ describe("SQLite database layer", () => {
       label: "high_trust",
       driverJson: JSON.stringify(["Trust score 91%."]),
     });
+    repositories.refundTimelines.create({
+      id: "refund_timeline_1",
+      profileId: "profile_1",
+      originalTransactionId: "transaction_1",
+      status: "none",
+      expectedRefundMinor: 0,
+      receivedRefundMinor: 0,
+      remainingEligibleSpendMinor: 1840,
+      milesReversal: 0,
+      confidenceScore: 1,
+      eventJson: "[]",
+      caveatJson: "[]",
+      calculatedAt: "2026-06-26T00:00:00.000Z",
+    });
     repositories.rewardLedger.create({
       id: "ledger_1",
       profileId: "profile_1",
@@ -163,6 +177,9 @@ describe("SQLite database layer", () => {
     );
     expect(repositories.transactionTrustScores.getByTransactionId("transaction_1")?.label).toBe(
       "high_trust",
+    );
+    expect(repositories.refundTimelines.getByOriginalTransactionId("transaction_1")?.status).toBe(
+      "none",
     );
     expect(repositories.rewardLedger.listForProfile("profile_1")).toHaveLength(1);
   });

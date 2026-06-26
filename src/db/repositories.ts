@@ -8,6 +8,7 @@ import {
   expenseSnapshots,
   plannerProfiles,
   profiles,
+  refundTimelines,
   rewardLedger,
   statementReconciliations,
   statementImports,
@@ -25,6 +26,7 @@ export type NewStatementReconciliation = InferInsertModel<typeof statementReconc
 export type NewAccount = InferInsertModel<typeof accounts>;
 export type NewTransaction = InferInsertModel<typeof transactions>;
 export type NewTransactionTrustScore = InferInsertModel<typeof transactionTrustScores>;
+export type NewRefundTimeline = InferInsertModel<typeof refundTimelines>;
 export type NewRewardLedgerEntry = InferInsertModel<typeof rewardLedger>;
 
 export function createRepositories(connection: DatabaseConnection) {
@@ -38,7 +40,28 @@ export function createRepositories(connection: DatabaseConnection) {
     accounts: createAccountRepository(connection),
     transactions: createTransactionRepository(connection),
     transactionTrustScores: createTransactionTrustScoreRepository(connection),
+    refundTimelines: createRefundTimelineRepository(connection),
     rewardLedger: createRewardLedgerRepository(connection),
+  };
+}
+
+function createRefundTimelineRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewRefundTimeline) =>
+      connection.db.insert(refundTimelines).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(refundTimelines)
+        .where(eq(refundTimelines.profileId, profileId))
+        .orderBy(desc(refundTimelines.calculatedAt))
+        .all(),
+    getByOriginalTransactionId: (originalTransactionId: string) =>
+      connection.db
+        .select()
+        .from(refundTimelines)
+        .where(eq(refundTimelines.originalTransactionId, originalTransactionId))
+        .get(),
   };
 }
 
