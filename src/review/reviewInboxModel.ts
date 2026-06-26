@@ -1,4 +1,5 @@
 import type { ReviewItem, ReviewReason } from "../transactions/reviewModel";
+import type { TrustLabel } from "../ingestion/reconciliation";
 
 export type ReviewRowStatus =
   | "clean"
@@ -27,6 +28,9 @@ export type ReviewTransaction = {
   merchantId?: string | null;
   cardId?: string | null;
   confidenceScore: number;
+  trustScore?: number;
+  trustLabel?: TrustLabel;
+  trustDrivers?: string[];
   eligibleForMiles: boolean;
   needsReview: boolean;
   transactionKind: "purchase" | "refund" | "fee" | "interest" | "payment" | "adjustment";
@@ -40,6 +44,8 @@ export type ReviewInboxRow = {
   status: ReviewRowStatus;
   openReasons: ReviewReason[];
   confidenceScore: number;
+  trustScore?: number;
+  trustLabel?: TrustLabel;
   diagnostics: string[];
   primaryAction: string;
 };
@@ -121,6 +127,8 @@ export function buildReviewInboxRow(
     status,
     openReasons,
     confidenceScore: transaction.confidenceScore,
+    trustScore: transaction.trustScore,
+    trustLabel: transaction.trustLabel,
     diagnostics: diagnosticsForStatus(transaction, status, openReasons),
     primaryAction: primaryActionForStatus(status),
   };
@@ -188,6 +196,10 @@ function compareRows(left: ReviewInboxRow, right: ReviewInboxRow) {
     return statusPriority(right.status) - statusPriority(left.status);
   }
 
+  if (left.trustLabel !== right.trustLabel) {
+    return trustPriority(right.trustLabel) - trustPriority(left.trustLabel);
+  }
+
   return right.postedDate.localeCompare(left.postedDate);
 }
 
@@ -206,6 +218,19 @@ function statusPriority(status: ReviewRowStatus) {
   }
 }
 
+function trustPriority(label: TrustLabel | undefined) {
+  switch (label) {
+    case "needs_review":
+      return 3;
+    case "medium_trust":
+      return 2;
+    case "high_trust":
+      return 1;
+    case undefined:
+      return 0;
+  }
+}
+
 function diagnosticsForStatus(
   transaction: ReviewTransaction,
   status: ReviewRowStatus,
@@ -215,6 +240,14 @@ function diagnosticsForStatus(
 
   if (transaction.confidenceScore < 0.8) {
     diagnostics.push(`Confidence ${Math.round(transaction.confidenceScore * 100)}%.`);
+  }
+
+  if (transaction.trustLabel) {
+    diagnostics.push(`${formatTrustLabel(transaction.trustLabel)}.`);
+  }
+
+  if (transaction.trustDrivers && transaction.trustDrivers.length > 0) {
+    diagnostics.push(...transaction.trustDrivers);
   }
 
   if (openReasons.length > 0) {
@@ -240,6 +273,17 @@ function diagnosticsForStatus(
   }
 
   return diagnostics;
+}
+
+function formatTrustLabel(label: TrustLabel) {
+  switch (label) {
+    case "high_trust":
+      return "High trust";
+    case "medium_trust":
+      return "Medium trust";
+    case "needs_review":
+      return "Needs review";
+  }
 }
 
 function primaryActionForStatus(status: ReviewRowStatus) {

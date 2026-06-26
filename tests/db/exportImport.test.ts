@@ -29,9 +29,11 @@ describe("local data export and import", () => {
     expect(artifact.formatVersion).toBe(exportFormatVersion);
     expect(artifact.app).toEqual({ name: "Wander", exportSource: "local-sqlite" });
     expect(artifact.database.sourceFilesIncluded).toBe(false);
-    expect(artifact.database.migrationIds).toEqual(["0001"]);
+    expect(artifact.database.migrationIds).toEqual(["0001", "0002"]);
     expect(artifact.data.profiles).toHaveLength(1);
     expect(artifact.data.statement_imports).toHaveLength(1);
+    expect(artifact.data.statement_reconciliations).toHaveLength(1);
+    expect(artifact.data.transaction_trust_scores).toHaveLength(1);
     expect(artifact.data.seeded_data_versions).toHaveLength(1);
 
     const serialized = JSON.stringify(artifact);
@@ -48,14 +50,20 @@ describe("local data export and import", () => {
       const result = importLocalData(target, artifact);
       const repositories = createRepositories(target);
 
-      expect(result.importedTables).toBe(16);
+      expect(result.importedTables).toBe(18);
       expect(repositories.profiles.getById("profile_1")?.name).toBe("Primary");
-      expect(repositories.statementImports.getByProfileAndHash("profile_1", "hash_1")?.bankName).toBe(
-        "DBS",
+      expect(
+        repositories.statementImports.getByProfileAndHash("profile_1", "hash_1")?.bankName,
+      ).toBe("DBS");
+      expect(
+        repositories.transactions.getByFingerprint("profile_1", "fingerprint_1")?.amountMinor,
+      ).toBe(-1840);
+      expect(repositories.statementReconciliations.getByImportId("import_profile_1")?.status).toBe(
+        "verified",
       );
-      expect(repositories.transactions.getByFingerprint("profile_1", "fingerprint_1")?.amountMinor).toBe(
-        -1840,
-      );
+      expect(
+        repositories.transactionTrustScores.getByTransactionId("transaction_profile_1")?.label,
+      ).toBe("high_trust");
 
       const seededVersion = target.sqlite
         .prepare("SELECT dataset_version FROM seeded_data_versions WHERE dataset_name = ?")
@@ -76,7 +84,9 @@ describe("local data export and import", () => {
     try {
       importLocalData(target, artifact);
 
-      const profileCount = target.sqlite.prepare("SELECT count(*) as count FROM profiles").get() as {
+      const profileCount = target.sqlite
+        .prepare("SELECT count(*) as count FROM profiles")
+        .get() as {
         count: number;
       };
 
@@ -189,6 +199,33 @@ function seedSourceDatabase(
     confidenceScore: 0.92,
     needsReview: true,
     transactionFingerprint,
+  });
+  repositories.statementReconciliations.create({
+    id: `reconciliation_${profileId}`,
+    profileId,
+    statementImportId: `import_${profileId}`,
+    periodStart: "2026-06-01",
+    periodEnd: "2026-06-30",
+    openingBalanceMinor: 100_000,
+    closingBalanceMinor: 98_160,
+    debitTotalMinor: 1_840,
+    creditTotalMinor: 0,
+    feeTotalMinor: 0,
+    rowCount: 1,
+    duplicateCount: 0,
+    unexplainedDeltaMinor: 0,
+    status: "verified",
+    confidenceScore: 1,
+    issueJson: "[]",
+  });
+  repositories.transactionTrustScores.create({
+    id: `trust_${profileId}`,
+    profileId,
+    statementImportId: `import_${profileId}`,
+    transactionId: `transaction_${profileId}`,
+    score: 0.91,
+    label: "high_trust",
+    driverJson: JSON.stringify(["Trust score 91%."]),
   });
   repositories.rewardLedger.create({
     id: `ledger_${profileId}`,

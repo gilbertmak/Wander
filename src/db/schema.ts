@@ -2,11 +2,20 @@ import { relations, sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const directionValues = ["debit", "credit"] as const;
-export const transactionKindValues = ["purchase", "refund", "fee", "interest", "payment", "adjustment"] as const;
+export const transactionKindValues = [
+  "purchase",
+  "refund",
+  "fee",
+  "interest",
+  "payment",
+  "adjustment",
+] as const;
 export const importStatusValues = ["parsed", "committed", "duplicate", "failed"] as const;
 export const matchStatusValues = ["matched", "partial", "uncertain", "rejected"] as const;
 export const ledgerTypeValues = ["earn", "reversal", "adjustment"] as const;
 export const ledgerStatusValues = ["pending", "posted", "reversed", "excluded"] as const;
+export const reconciliationStatusValues = ["verified", "mostly_verified", "needs_review"] as const;
+export const trustLabelValues = ["high_trust", "medium_trust", "needs_review"] as const;
 
 const now = sql`CURRENT_TIMESTAMP`;
 
@@ -63,7 +72,13 @@ export const expenseSnapshots = sqliteTable(
     createdAt: text("created_at").notNull().default(now),
     updatedAt: text("updated_at").notNull().default(now),
   },
-  (table) => [index("expense_snapshots_profile_period_idx").on(table.profileId, table.periodStart, table.periodEnd)],
+  (table) => [
+    index("expense_snapshots_profile_period_idx").on(
+      table.profileId,
+      table.periodStart,
+      table.periodEnd,
+    ),
+  ],
 );
 
 export const statementImports = sqliteTable(
@@ -86,6 +101,38 @@ export const statementImports = sqliteTable(
   (table) => [
     uniqueIndex("statement_imports_profile_hash_unique").on(table.profileId, table.sourceFileHash),
     index("statement_imports_profile_status_idx").on(table.profileId, table.importStatus),
+  ],
+);
+
+export const statementReconciliations = sqliteTable(
+  "statement_reconciliations",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    statementImportId: text("statement_import_id")
+      .notNull()
+      .references(() => statementImports.id, { onDelete: "cascade" }),
+    periodStart: text("period_start").notNull(),
+    periodEnd: text("period_end").notNull(),
+    openingBalanceMinor: integer("opening_balance_minor"),
+    closingBalanceMinor: integer("closing_balance_minor"),
+    debitTotalMinor: integer("debit_total_minor").notNull(),
+    creditTotalMinor: integer("credit_total_minor").notNull(),
+    feeTotalMinor: integer("fee_total_minor").notNull(),
+    rowCount: integer("row_count").notNull(),
+    duplicateCount: integer("duplicate_count").notNull(),
+    unexplainedDeltaMinor: integer("unexplained_delta_minor").notNull(),
+    status: text("status").notNull(),
+    confidenceScore: real("confidence_score").notNull(),
+    issueJson: text("issue_json").notNull().default("[]"),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("statement_reconciliations_import_unique").on(table.statementImportId),
+    index("statement_reconciliations_profile_status_idx").on(table.profileId, table.status),
   ],
 );
 
@@ -128,8 +175,12 @@ export const mccCodes = sqliteTable(
     code: text("code").notNull(),
     title: text("title").notNull(),
     networkDescription: text("network_description"),
-    defaultCategoryId: text("default_category_id").references(() => categories.id, { onDelete: "set null" }),
-    defaultMilesEligibility: integer("default_miles_eligibility", { mode: "boolean" }).notNull().default(true),
+    defaultCategoryId: text("default_category_id").references(() => categories.id, {
+      onDelete: "set null",
+    }),
+    defaultMilesEligibility: integer("default_miles_eligibility", { mode: "boolean" })
+      .notNull()
+      .default(true),
     createdAt: text("created_at").notNull().default(now),
     updatedAt: text("updated_at").notNull().default(now),
   },
@@ -144,7 +195,9 @@ export const merchants = sqliteTable(
   {
     id: text("id").primaryKey(),
     canonicalName: text("canonical_name").notNull(),
-    defaultCategoryId: text("default_category_id").references(() => categories.id, { onDelete: "set null" }),
+    defaultCategoryId: text("default_category_id").references(() => categories.id, {
+      onDelete: "set null",
+    }),
     defaultMccId: text("default_mcc_id").references(() => mccCodes.id, { onDelete: "set null" }),
     country: text("country").notNull().default("SG"),
     createdAt: text("created_at").notNull().default(now),
@@ -217,7 +270,9 @@ export const cardRules = sqliteTable(
     createdAt: text("created_at").notNull().default(now),
     updatedAt: text("updated_at").notNull().default(now),
   },
-  (table) => [index("card_rules_card_effective_idx").on(table.cardId, table.effectiveFrom, table.effectiveTo)],
+  (table) => [
+    index("card_rules_card_effective_idx").on(table.cardId, table.effectiveFrom, table.effectiveTo),
+  ],
 );
 
 export const transactions = sqliteTable(
@@ -228,7 +283,9 @@ export const transactions = sqliteTable(
       .notNull()
       .references(() => profiles.id, { onDelete: "cascade" }),
     accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
-    statementImportId: text("statement_import_id").references(() => statementImports.id, { onDelete: "set null" }),
+    statementImportId: text("statement_import_id").references(() => statementImports.id, {
+      onDelete: "set null",
+    }),
     postedDate: text("posted_date").notNull(),
     transactionDate: text("transaction_date"),
     descriptionRaw: text("description_raw").notNull(),
@@ -249,12 +306,46 @@ export const transactions = sqliteTable(
     updatedAt: text("updated_at").notNull().default(now),
   },
   (table) => [
-    uniqueIndex("transactions_profile_fingerprint_unique").on(table.profileId, table.transactionFingerprint),
+    uniqueIndex("transactions_profile_fingerprint_unique").on(
+      table.profileId,
+      table.transactionFingerprint,
+    ),
     index("transactions_profile_posted_idx").on(table.profileId, table.postedDate),
     index("transactions_profile_review_idx").on(table.profileId, table.needsReview),
     index("transactions_profile_merchant_idx").on(table.profileId, table.merchantId),
     index("transactions_profile_mcc_idx").on(table.profileId, table.mccId),
-    index("transactions_profile_card_posted_idx").on(table.profileId, table.cardId, table.postedDate),
+    index("transactions_profile_card_posted_idx").on(
+      table.profileId,
+      table.cardId,
+      table.postedDate,
+    ),
+  ],
+);
+
+export const transactionTrustScores = sqliteTable(
+  "transaction_trust_scores",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    statementImportId: text("statement_import_id")
+      .notNull()
+      .references(() => statementImports.id, { onDelete: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    score: real("score").notNull(),
+    label: text("label").notNull(),
+    driverJson: text("driver_json").notNull().default("[]"),
+    calculatedAt: text("calculated_at").notNull().default(now),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("transaction_trust_scores_transaction_unique").on(table.transactionId),
+    index("transaction_trust_scores_profile_label_idx").on(table.profileId, table.label),
+    index("transaction_trust_scores_import_idx").on(table.statementImportId),
   ],
 );
 
@@ -291,7 +382,9 @@ export const rewardLedger = sqliteTable(
     profileId: text("profile_id")
       .notNull()
       .references(() => profiles.id, { onDelete: "cascade" }),
-    transactionId: text("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+    transactionId: text("transaction_id").references(() => transactions.id, {
+      onDelete: "set null",
+    }),
     cardId: text("card_id").references(() => cards.id, { onDelete: "set null" }),
     ruleId: text("rule_id").references(() => cardRules.id, { onDelete: "set null" }),
     ledgerType: text("ledger_type").notNull(),
@@ -307,7 +400,11 @@ export const rewardLedger = sqliteTable(
     updatedAt: text("updated_at").notNull().default(now),
   },
   (table) => [
-    index("reward_ledger_profile_card_created_idx").on(table.profileId, table.cardId, table.createdAt),
+    index("reward_ledger_profile_card_created_idx").on(
+      table.profileId,
+      table.cardId,
+      table.createdAt,
+    ),
     index("reward_ledger_profile_transaction_idx").on(table.profileId, table.transactionId),
   ],
 );
@@ -343,4 +440,6 @@ export const profileRelations = relations(profiles, ({ many, one }) => ({
   statementImports: many(statementImports),
   accounts: many(accounts),
   transactions: many(transactions),
+  statementReconciliations: many(statementReconciliations),
+  transactionTrustScores: many(transactionTrustScores),
 }));

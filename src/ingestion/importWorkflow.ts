@@ -4,6 +4,11 @@ import type { DatabaseConnection } from "../db/client";
 import { createRepositories } from "../db/repositories";
 import { assertNoImportDuplicates } from "./duplicateDetection";
 import type { ParseStatementRequest, ParseStatementSuccess } from "./parserBridge";
+import {
+  calculateStatementReconciliation,
+  calculateTransactionTrustScore,
+  type ReconciliationInput,
+} from "./reconciliation";
 
 export type ImportPreviewTransaction = {
   externalId: string;
@@ -46,6 +51,8 @@ export type CommitImportResult = {
   statementImportId: string;
   accountIds: string[];
   transactionIds: string[];
+  reconciliationId: string;
+  trustScoreIds: string[];
 };
 
 export function buildImportPreview(
@@ -66,7 +73,12 @@ export function buildImportPreview(
       warningJson: JSON.stringify(result.warnings),
     },
     accountHints: result.accountHints.map((hint, index) => ({
-      id: stableId("account", request.profileId, result.bankName, hint.maskedIdentifier ?? `${index}`),
+      id: stableId(
+        "account",
+        request.profileId,
+        result.bankName,
+        hint.maskedIdentifier ?? `${index}`,
+      ),
       accountType: hint.accountType,
       accountLabel: `${result.bankName} ${hint.accountType}`,
       maskedIdentifier: hint.maskedIdentifier,
@@ -106,7 +118,19 @@ export function buildImportPreview(
 export function commitImportPreview(
   connection: DatabaseConnection,
   preview: ImportPreview,
-  options: { skipDuplicateCheck?: boolean } = {},
+  options: {
+    skipDuplicateCheck?: boolean;
+    reconciliation?: Partial<
+      Pick<
+        ReconciliationInput,
+        | "openingBalanceMinor"
+        | "closingBalanceMinor"
+        | "periodStart"
+        | "periodEnd"
+        | "duplicateCount"
+      >
+    >;
+  } = {},
 ): CommitImportResult {
   if (!options.skipDuplicateCheck) {
     assertNoImportDuplicates(connection, preview);
@@ -115,6 +139,8 @@ export function commitImportPreview(
   const repositories = createRepositories(connection);
   const accountIds: string[] = [];
   const transactionIds: string[] = [];
+  const trustScoreIds: string[] = [];
+  let reconciliationId = "";
 
   connection.sqlite.transaction(() => {
     repositories.statementImports.create({
@@ -159,12 +185,69 @@ export function commitImportPreview(
       });
       transactionIds.push(id);
     }
+
+    const reconciliation = calculateStatementReconciliation({
+      statementImportId: preview.statementImport.id,
+      profileId: preview.statementImport.profileId,
+      periodStart:
+        options.reconciliation?.periodStart ?? resolvePeriod(preview.transactions).periodStart,
+      periodEnd: options.reconciliation?.periodEnd ?? resolvePeriod(preview.transactions).periodEnd,
+      openingBalanceMinor: options.reconciliation?.openingBalanceMinor,
+      closingBalanceMinor: options.reconciliation?.closingBalanceMinor,
+      duplicateCount:
+        options.reconciliation?.duplicateCount ?? countDuplicateFingerprints(preview.transactions),
+      transactions: preview.transactions,
+    });
+    repositories.statementReconciliations.create({
+      id: reconciliation.id,
+      profileId: reconciliation.profileId,
+      statementImportId: reconciliation.statementImportId,
+      periodStart: reconciliation.periodStart,
+      periodEnd: reconciliation.periodEnd,
+      openingBalanceMinor: reconciliation.openingBalanceMinor,
+      closingBalanceMinor: reconciliation.closingBalanceMinor,
+      debitTotalMinor: reconciliation.debitTotalMinor,
+      creditTotalMinor: reconciliation.creditTotalMinor,
+      feeTotalMinor: reconciliation.feeTotalMinor,
+      rowCount: reconciliation.rowCount,
+      duplicateCount: reconciliation.duplicateCount,
+      unexplainedDeltaMinor: reconciliation.unexplainedDeltaMinor,
+      status: reconciliation.status,
+      confidenceScore: reconciliation.confidenceScore,
+      issueJson: JSON.stringify(reconciliation.issues),
+    });
+    reconciliationId = reconciliation.id;
+
+    preview.transactions.forEach((transaction, index) => {
+      const transactionId = transactionIds[index];
+      const trust = calculateTransactionTrustScore({
+        transactionId,
+        statementImportId: preview.statementImport.id,
+        profileId: preview.statementImport.profileId,
+        parserConfidence: transaction.confidenceScore,
+        duplicateRisk: reconciliation.duplicateCount > 0,
+        reconciliationStatus: reconciliation.status,
+        refundLinked: transaction.transactionKind === "refund" ? false : undefined,
+      });
+      repositories.transactionTrustScores.create({
+        id: trust.id,
+        profileId: trust.profileId,
+        statementImportId: trust.statementImportId,
+        transactionId: trust.transactionId,
+        score: trust.score,
+        label: trust.label,
+        driverJson: JSON.stringify(trust.drivers),
+      });
+      trustScoreIds.push(trust.id);
+    });
   })();
 
   return {
     statementImportId: preview.statementImport.id,
     accountIds,
     transactionIds,
+    reconciliationId,
+    trustScoreIds,
   };
 }
 
@@ -179,6 +262,29 @@ function parseAmountMinor(amount: string) {
 
 function normalizeDescription(description: string) {
   return description.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function resolvePeriod(transactions: ImportPreviewTransaction[]) {
+  const dates = transactions.map((transaction) => transaction.postedDate).sort();
+
+  return {
+    periodStart: dates[0] ?? new Date().toISOString().slice(0, 10),
+    periodEnd: dates[dates.length - 1] ?? new Date().toISOString().slice(0, 10),
+  };
+}
+
+function countDuplicateFingerprints(transactions: ImportPreviewTransaction[]) {
+  const seen = new Set<string>();
+  let duplicates = 0;
+
+  for (const transaction of transactions) {
+    if (seen.has(transaction.transactionFingerprint)) {
+      duplicates += 1;
+    }
+    seen.add(transaction.transactionFingerprint);
+  }
+
+  return duplicates;
 }
 
 function stableId(prefix: string, ...parts: string[]) {

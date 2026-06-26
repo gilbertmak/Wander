@@ -43,6 +43,8 @@ describe("review inbox model", () => {
         ...baseTransaction,
         id: "transaction_1",
         confidenceScore: 0.61,
+        trustLabel: "medium_trust",
+        trustDrivers: ["MCC confidence below review threshold."],
       },
       [
         reviewItem("transaction_1", "category"),
@@ -59,6 +61,8 @@ describe("review inbox model", () => {
     });
     expect(row.diagnostics).toEqual([
       "Confidence 61%.",
+      "Medium trust.",
+      "MCC confidence below review threshold.",
       "Open review reasons: mcc, category.",
       "Assign MCC before miles eligibility calculation.",
     ]);
@@ -67,7 +71,12 @@ describe("review inbox model", () => {
   it("builds inbox summary and sorts actionable rows by severity before date", () => {
     const transactions: ReviewTransaction[] = [
       baseTransaction,
-      { ...baseTransaction, id: "transaction_category", categoryId: null, postedDate: "2026-06-24" },
+      {
+        ...baseTransaction,
+        id: "transaction_category",
+        categoryId: null,
+        postedDate: "2026-06-24",
+      },
       { ...baseTransaction, id: "transaction_refund", postedDate: "2026-06-23" },
       { ...baseTransaction, id: "transaction_miles", postedDate: "2026-06-22" },
     ];
@@ -98,7 +107,9 @@ describe("review inbox model", () => {
   });
 
   it("returns explicit loading, error, duplicate import, stale card rule, and empty states", () => {
-    expect(buildReviewInboxModel({ loading: true, transactions: [], reviewItems: [] })).toMatchObject({
+    expect(
+      buildReviewInboxModel({ loading: true, transactions: [], reviewItems: [] }),
+    ).toMatchObject({
       state: "loading",
       message: "Loading review inbox.",
     });
@@ -118,7 +129,9 @@ describe("review inbox model", () => {
     ).toMatchObject({
       state: "stale_card_rule",
     });
-    expect(buildReviewInboxModel({ transactions: [baseTransaction], reviewItems: [] })).toMatchObject({
+    expect(
+      buildReviewInboxModel({ transactions: [baseTransaction], reviewItems: [] }),
+    ).toMatchObject({
       state: "empty",
       summary: {
         clean: 1,
@@ -132,7 +145,10 @@ describe("review inbox model", () => {
     expect(
       summarizeReviewRows([
         buildReviewInboxRow(baseTransaction, []),
-        buildReviewInboxRow({ ...baseTransaction, id: "transaction_missing_mcc", mccCode: null }, []),
+        buildReviewInboxRow(
+          { ...baseTransaction, id: "transaction_missing_mcc", mccCode: null },
+          [],
+        ),
       ]),
     ).toMatchObject({
       clean: 1,
@@ -140,6 +156,33 @@ describe("review inbox model", () => {
       total: 2,
       actionable: 1,
     });
+  });
+
+  it("sorts lower trust rows first within the same review status", () => {
+    const model = buildReviewInboxModel({
+      transactions: [
+        {
+          ...baseTransaction,
+          id: "transaction_high_trust",
+          categoryId: null,
+          postedDate: "2026-06-24",
+          trustLabel: "high_trust",
+        },
+        {
+          ...baseTransaction,
+          id: "transaction_low_trust",
+          categoryId: null,
+          postedDate: "2026-06-20",
+          trustLabel: "needs_review",
+        },
+      ],
+      reviewItems: [],
+    });
+
+    expect(model.rows.map((row) => row.transactionId)).toEqual([
+      "transaction_low_trust",
+      "transaction_high_trust",
+    ]);
   });
 });
 
