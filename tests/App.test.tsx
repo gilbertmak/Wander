@@ -36,6 +36,8 @@ describe("App shell", () => {
     expect(screen.getByRole("heading", { name: /3 items need confirmation/i })).toBeInTheDocument();
     expect(screen.getByLabelText("Insights")).toBeInTheDocument();
     expect(screen.getByText(/Matched merchant text/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /annual expenses \+S\$6,000/i })).toBeInTheDocument();
+    expect(screen.getByText("Monthly net spend")).toBeInTheDocument();
   });
 
   it("saves a desktop correction and reports recalculation triggers", async () => {

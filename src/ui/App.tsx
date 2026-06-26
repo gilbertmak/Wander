@@ -4,6 +4,7 @@ import {
   applyCorrectionDraft,
   type CorrectionField,
 } from "../review/correctionWorkflow";
+import { calculateImpactPreview, type ImpactPreview } from "../review/impactPreview";
 import type { ReviewTransaction } from "../review/reviewInboxModel";
 import { useAppShellStore, type AppTab } from "../state/appShellStore";
 
@@ -50,6 +51,25 @@ const sampleReviewTransaction: ReviewTransaction = {
   needsReview: true,
   transactionKind: "purchase",
 };
+
+const sampleImpactPreview = calculateImpactPreview({
+  projectionInput: {
+    currentAge: 35,
+    targetRetirementAge: 45,
+    currentNetWorthMinor: 80_000_000,
+    annualExpensesMinor: 4_800_000,
+    annualSavingsMinor: 3_000_000,
+    safeWithdrawalRate: 0.035,
+    expectedReturnRate: 0.05,
+    inflationRate: 0.02,
+    maxYears: 30,
+  },
+  currentMonthlyNetSpendMinor: 400_000,
+  nextMonthlyNetSpendMinor: 450_000,
+  currentMiles: 10_000,
+  nextMiles: 9_200,
+  recalculationTriggers: ["refund_match_changed", "miles_eligibility_changed"],
+});
 
 export function App() {
   const activeTab = useAppShellStore((state) => state.activeTab);
@@ -152,6 +172,7 @@ function DesktopShell({
             <button type="button">Review all</button>
           </div>
           <CorrectionPanel />
+          <ImpactPreviewPanel preview={sampleImpactPreview} />
           <ReviewRow
             title="SP Services Utilities"
             meta="MCC 4900 · Utilities · no miles"
@@ -210,6 +231,35 @@ function DesktopShell({
           </dl>
         </section>
       </aside>
+    </section>
+  );
+}
+
+function ImpactPreviewPanel({ preview }: { preview: ImpactPreview }) {
+  return (
+    <section className="impact-preview" aria-labelledby="impact-preview-title">
+      <div>
+        <p className="eyebrow">Impact preview</p>
+        <h3 id="impact-preview-title">{preview.summary}</h3>
+      </div>
+      <dl>
+        <div>
+          <dt>Monthly net spend</dt>
+          <dd>{formatSignedMoney(preview.monthlyNetSpendDeltaMinor)}</dd>
+        </div>
+        <div>
+          <dt>Annual expenses</dt>
+          <dd>{formatSignedMoney(preview.annualizedExpensesDeltaMinor)}</dd>
+        </div>
+        <div>
+          <dt>FI age</dt>
+          <dd>{preview.fiAgeDelta === undefined ? "n/a" : `${preview.fiAgeDelta > 0 ? "+" : ""}${preview.fiAgeDelta}`}</dd>
+        </div>
+        <div>
+          <dt>Miles</dt>
+          <dd>{preview.milesDelta > 0 ? `+${preview.milesDelta}` : preview.milesDelta}</dd>
+        </div>
+      </dl>
     </section>
   );
 }
@@ -413,4 +463,11 @@ function defaultCorrectionValue(field: CorrectionField) {
     case "miles_eligibility":
       return "false";
   }
+}
+
+function formatSignedMoney(valueMinor: number) {
+  const sign = valueMinor > 0 ? "+" : "-";
+  return `${sign}S$${Math.abs(valueMinor / 100).toLocaleString("en-SG", {
+    maximumFractionDigits: 0,
+  })}`;
 }
