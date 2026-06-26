@@ -7,7 +7,9 @@ import {
   cardPeriodSummaries,
   decisionTraces,
   expenseSnapshots,
+  milesLeakageItems,
   plannerProfiles,
+  plannedPurchases,
   profiles,
   refundTimelines,
   rewardLedger,
@@ -15,7 +17,6 @@ import {
   statementImports,
   transactionTrustScores,
   transactions,
-  milesLeakageItems,
 } from "./schema";
 
 export type Profile = InferSelectModel<typeof profiles>;
@@ -31,6 +32,7 @@ export type NewTransaction = InferInsertModel<typeof transactions>;
 export type NewTransactionTrustScore = InferInsertModel<typeof transactionTrustScores>;
 export type NewRefundTimeline = InferInsertModel<typeof refundTimelines>;
 export type NewMilesLeakageItem = InferInsertModel<typeof milesLeakageItems>;
+export type NewPlannedPurchase = InferInsertModel<typeof plannedPurchases>;
 export type NewRewardLedgerEntry = InferInsertModel<typeof rewardLedger>;
 
 export function createRepositories(connection: DatabaseConnection) {
@@ -47,7 +49,22 @@ export function createRepositories(connection: DatabaseConnection) {
     transactionTrustScores: createTransactionTrustScoreRepository(connection),
     refundTimelines: createRefundTimelineRepository(connection),
     milesLeakageItems: createMilesLeakageItemRepository(connection),
+    plannedPurchases: createPlannedPurchaseRepository(connection),
     rewardLedger: createRewardLedgerRepository(connection),
+  };
+}
+
+function createPlannedPurchaseRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewPlannedPurchase) =>
+      connection.db.insert(plannedPurchases).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(plannedPurchases)
+        .where(eq(plannedPurchases.profileId, profileId))
+        .orderBy(desc(plannedPurchases.plannedDate))
+        .all(),
   };
 }
 

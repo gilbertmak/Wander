@@ -31,6 +31,12 @@ const leakageReasons = [
   { label: "Low-confidence MCC", value: "180 mi", action: "Confirm MCC" },
 ];
 
+const cardPlannerResults = [
+  { card: "HSBC Revolution", miles: "480 mi", caveat: "S$880 cap left" },
+  { card: "UOB Lady's", miles: "480 mi", caveat: "Dining category selected" },
+  { card: "DBS Woman's World", miles: "48 mi", caveat: "Offline spend ineligible" },
+];
+
 const reviewGroups = [
   {
     label: "Confirm merchant",
@@ -534,6 +540,7 @@ function CardsPanel() {
       </div>
 
       <MilesLeakageCard />
+      <CardPlannerPanel />
 
       <section className="card-stack" aria-label="Card recommendations">
         <article>
@@ -586,6 +593,28 @@ function MilesLeakageCard() {
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+function CardPlannerPanel() {
+  return (
+    <section className="card-planner" aria-label="Plan a purchase">
+      <div>
+        <p className="eyebrow">Plan a purchase</p>
+        <h3>Haidilao · S$120 · contactless</h3>
+        <p>Ranked cards show expected miles, cap context, and caveats before the purchase.</p>
+      </div>
+      <ol>
+        {cardPlannerResults.map((result) => (
+          <li key={result.card}>
+            <span>{result.card}</span>
+            <strong>{result.miles}</strong>
+            <p>{result.caveat}</p>
+          </li>
+        ))}
+      </ol>
+      <button type="button">Save planned purchase</button>
     </section>
   );
 }
