@@ -358,6 +358,30 @@ export const transactionTrustScores = sqliteTable(
   ],
 );
 
+export const decisionTraces = sqliteTable(
+  "decision_traces",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    sourceModule: text("source_module").notNull(),
+    sourceRecordId: text("source_record_id").notNull(),
+    sourceRecordIdsJson: text("source_record_ids_json").notNull().default("[]"),
+    ruleVersion: text("rule_version").notNull(),
+    inputFactsJson: text("input_facts_json").notNull().default("{}"),
+    outputValueJson: text("output_value_json").notNull().default("{}"),
+    confidenceScore: real("confidence_score").notNull(),
+    explanationText: text("explanation_text").notNull(),
+    caveatJson: text("caveat_json").notNull().default("[]"),
+    createdAt: text("created_at").notNull().default(now),
+  },
+  (table) => [
+    index("decision_traces_profile_module_idx").on(table.profileId, table.sourceModule),
+    index("decision_traces_source_record_idx").on(table.sourceRecordId),
+  ],
+);
+
 export const refundMatches = sqliteTable(
   "refund_matches",
   {
@@ -451,4 +475,5 @@ export const profileRelations = relations(profiles, ({ many, one }) => ({
   transactions: many(transactions),
   statementReconciliations: many(statementReconciliations),
   transactionTrustScores: many(transactionTrustScores),
+  decisionTraces: many(decisionTraces),
 }));

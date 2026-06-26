@@ -4,6 +4,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import type { DatabaseConnection } from "./client";
 import {
   accounts,
+  decisionTraces,
   expenseSnapshots,
   plannerProfiles,
   profiles,
@@ -18,6 +19,7 @@ export type Profile = InferSelectModel<typeof profiles>;
 export type NewProfile = InferInsertModel<typeof profiles>;
 export type NewPlannerProfile = InferInsertModel<typeof plannerProfiles>;
 export type NewExpenseSnapshot = InferInsertModel<typeof expenseSnapshots>;
+export type NewDecisionTrace = InferInsertModel<typeof decisionTraces>;
 export type NewStatementImport = InferInsertModel<typeof statementImports>;
 export type NewStatementReconciliation = InferInsertModel<typeof statementReconciliations>;
 export type NewAccount = InferInsertModel<typeof accounts>;
@@ -30,12 +32,39 @@ export function createRepositories(connection: DatabaseConnection) {
     profiles: createProfileRepository(connection),
     plannerProfiles: createPlannerProfileRepository(connection),
     expenseSnapshots: createExpenseSnapshotRepository(connection),
+    decisionTraces: createDecisionTraceRepository(connection),
     statementImports: createStatementImportRepository(connection),
     statementReconciliations: createStatementReconciliationRepository(connection),
     accounts: createAccountRepository(connection),
     transactions: createTransactionRepository(connection),
     transactionTrustScores: createTransactionTrustScoreRepository(connection),
     rewardLedger: createRewardLedgerRepository(connection),
+  };
+}
+
+function createDecisionTraceRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewDecisionTrace) =>
+      connection.db.insert(decisionTraces).values(value).returning().get(),
+    listForSourceRecord: (sourceRecordId: string) =>
+      connection.db
+        .select()
+        .from(decisionTraces)
+        .where(eq(decisionTraces.sourceRecordId, sourceRecordId))
+        .orderBy(desc(decisionTraces.createdAt))
+        .all(),
+    listForModule: (profileId: string, sourceModule: string) =>
+      connection.db
+        .select()
+        .from(decisionTraces)
+        .where(
+          and(
+            eq(decisionTraces.profileId, profileId),
+            eq(decisionTraces.sourceModule, sourceModule),
+          ),
+        )
+        .orderBy(desc(decisionTraces.createdAt))
+        .all(),
   };
 }
 

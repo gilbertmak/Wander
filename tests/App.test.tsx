@@ -61,4 +61,17 @@ describe("App shell", () => {
     expect(screen.getByText(/Saved mcc correction/i)).toBeInTheDocument();
     expect(screen.getByText(/mcc_corrected, miles_eligibility_changed/i)).toBeInTheDocument();
   });
+
+  it("opens and closes the why-this drawer", async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Why this?" })[0]);
+
+    expect(screen.getByLabelText("Why this explanation")).toBeInTheDocument();
+    expect(screen.getByText(/trust_score · merchant_resolver/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(screen.queryByLabelText("Why this explanation")).not.toBeInTheDocument();
+  });
 });

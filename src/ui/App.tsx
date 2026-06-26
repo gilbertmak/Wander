@@ -156,6 +156,8 @@ function DesktopShell({
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
 }) {
+  const [whyOpen, setWhyOpen] = useState(false);
+
   return (
     <section className="desktop-shell" aria-label="Wander desktop dashboard">
       <aside className="desktop-sidebar" aria-label="Desktop navigation">
@@ -206,6 +208,7 @@ function DesktopShell({
             meta="MCC 4900 · Utilities · no miles"
             impact="Expense snapshot +S$94"
             diagnostic="Matched merchant text, category confidence 95%"
+            onExplain={() => setWhyOpen(true)}
             trustLabel="Medium trust"
             tone="warning"
           />
@@ -214,6 +217,7 @@ function DesktopShell({
             meta="MCC 4121 · Transport · 4 mpd eligible"
             impact="DBS block needs S$50"
             diagnostic="Refund matcher found no offset"
+            onExplain={() => setWhyOpen(true)}
             trustLabel="High trust"
             tone="progress"
           />
@@ -222,6 +226,7 @@ function DesktopShell({
             meta="MCC 9399 · Government · excluded"
             impact="No miles earned"
             diagnostic="Learned from prior correction"
+            onExplain={() => setWhyOpen(true)}
             trustLabel="Needs review"
             tone="success"
           />
@@ -262,6 +267,7 @@ function DesktopShell({
           </dl>
         </section>
       </aside>
+      {whyOpen && <WhyThisDrawer onClose={() => setWhyOpen(false)} />}
     </section>
   );
 }
@@ -319,6 +325,37 @@ function ReviewGroupPanel() {
         </article>
       ))}
     </section>
+  );
+}
+
+function WhyThisDrawer({ onClose }: { onClose: () => void }) {
+  return (
+    <aside className="why-drawer" aria-label="Why this explanation">
+      <div>
+        <p className="eyebrow">Why this?</p>
+        <h2>Medium trust</h2>
+        <p>
+          Parser confidence, merchant match, MCC confidence, and reconciliation status were used.
+        </p>
+      </div>
+      <dl>
+        <div>
+          <dt>Rules fired</dt>
+          <dd>trust_score · merchant_resolver</dd>
+        </div>
+        <div>
+          <dt>Caveats</dt>
+          <dd>Statement balances unavailable for this import.</dd>
+        </div>
+        <div>
+          <dt>Linked records</dt>
+          <dd>transaction_sp_services</dd>
+        </div>
+      </dl>
+      <button onClick={onClose} type="button">
+        Close
+      </button>
+    </aside>
   );
 }
 
@@ -515,6 +552,7 @@ function ReviewRow({
   meta,
   impact,
   diagnostic,
+  onExplain,
   trustLabel,
   tone,
 }: {
@@ -522,6 +560,7 @@ function ReviewRow({
   meta: string;
   impact: string;
   diagnostic: string;
+  onExplain: () => void;
   trustLabel: string;
   tone: "success" | "warning" | "progress";
 }) {
@@ -532,6 +571,9 @@ function ReviewRow({
         <p>{meta}</p>
         <span className="trust-badge">{trustLabel}</span>
         <span>{diagnostic}</span>
+        <button className="why-link" onClick={onExplain} type="button">
+          Why this?
+        </button>
       </div>
       <strong>{impact}</strong>
     </article>
