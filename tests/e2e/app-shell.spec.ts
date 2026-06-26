@@ -5,10 +5,18 @@ test("renders the FP-2 mobile shell and bottom tabs", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: /FIRE and miles/i })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Home" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Cards" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Latest import mostly verified" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Home" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Cards" }),
+  ).toBeVisible();
 
-  await page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Cards" }).click();
+  await page
+    .getByRole("navigation", { name: "Primary" })
+    .getByRole("button", { name: "Cards" })
+    .click();
 
   await expect(page.getByRole("heading", { name: "Miles runway" })).toBeVisible();
   await expect(page.getByLabel("Miles summary").getByText("48,000 mi")).toBeVisible();
@@ -22,6 +30,7 @@ test("renders the FP-2 desktop dashboard without duplicate diagnostic cards", as
   await expect(page.getByRole("heading", { name: /FI at 45/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /3 items need confirmation/i })).toBeVisible();
   await expect(page.getByText(/Matched merchant text/i)).toBeVisible();
+  await expect(page.getByText("Needs review")).toBeVisible();
   await expect(page.getByRole("heading", { name: /annual expenses \+S\$6,000/i })).toBeVisible();
   await expect(page.getByLabel("Insights")).toBeVisible();
 

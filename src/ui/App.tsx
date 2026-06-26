@@ -1,9 +1,6 @@
 import { useState } from "react";
 
-import {
-  applyCorrectionDraft,
-  type CorrectionField,
-} from "../review/correctionWorkflow";
+import { applyCorrectionDraft, type CorrectionField } from "../review/correctionWorkflow";
 import { calculateImpactPreview, type ImpactPreview } from "../review/impactPreview";
 import type { ReviewTransaction } from "../review/reviewInboxModel";
 import { useAppShellStore, type AppTab } from "../state/appShellStore";
@@ -239,6 +236,7 @@ function DesktopShell({
             meta="MCC 4900 · Utilities · no miles"
             impact="Expense snapshot +S$94"
             diagnostic="Matched merchant text, category confidence 95%"
+            trustLabel="Medium trust"
             tone="warning"
           />
           <ReviewRow
@@ -246,6 +244,7 @@ function DesktopShell({
             meta="MCC 4121 · Transport · 4 mpd eligible"
             impact="DBS block needs S$50"
             diagnostic="Refund matcher found no offset"
+            trustLabel="High trust"
             tone="progress"
           />
           <ReviewRow
@@ -253,6 +252,7 @@ function DesktopShell({
             meta="MCC 9399 · Government · excluded"
             impact="No miles earned"
             diagnostic="Learned from prior correction"
+            trustLabel="Needs review"
             tone="success"
           />
         </section>
@@ -314,7 +314,11 @@ function ImpactPreviewPanel({ preview }: { preview: ImpactPreview }) {
         </div>
         <div>
           <dt>FI age</dt>
-          <dd>{preview.fiAgeDelta === undefined ? "n/a" : `${preview.fiAgeDelta > 0 ? "+" : ""}${preview.fiAgeDelta}`}</dd>
+          <dd>
+            {preview.fiAgeDelta === undefined
+              ? "n/a"
+              : `${preview.fiAgeDelta > 0 ? "+" : ""}${preview.fiAgeDelta}`}
+          </dd>
         </div>
         <div>
           <dt>Miles</dt>
@@ -356,7 +360,11 @@ function CorrectionPanel() {
           onChange={(event) => {
             const selectedField = event.target.value as CorrectionField;
             setField(selectedField);
-            setNextValue(selectedField === "miles_eligibility" ? "false" : defaultCorrectionValue(selectedField));
+            setNextValue(
+              selectedField === "miles_eligibility"
+                ? "false"
+                : defaultCorrectionValue(selectedField),
+            );
           }}
           value={field}
         >
@@ -436,11 +444,36 @@ function MobileHome() {
       </div>
 
       <section className="action-list" aria-label="Priority actions">
-        <ActionRow label="Confirm May expense snapshot" detail="S$5.4K monthly net spend" tone="warning" />
-        <ActionRow label="Review 3 merchant matches" detail="MCC confidence below 80%" tone="progress" />
-        <ActionRow label="Next miles transfer chunk" detail="S$50 spend to DBS block" tone="success" />
+        <ImportQualityCard />
+        <ActionRow
+          label="Confirm May expense snapshot"
+          detail="S$5.4K monthly net spend"
+          tone="warning"
+        />
+        <ActionRow
+          label="Review 3 merchant matches"
+          detail="MCC confidence below 80%"
+          tone="progress"
+        />
+        <ActionRow
+          label="Next miles transfer chunk"
+          detail="S$50 spend to DBS block"
+          tone="success"
+        />
       </section>
     </section>
+  );
+}
+
+function ImportQualityCard() {
+  return (
+    <article className="import-quality">
+      <div>
+        <h3>Latest import mostly verified</h3>
+        <p>42 rows checked · statement balances unavailable</p>
+      </div>
+      <strong>86%</strong>
+    </article>
   );
 }
 
@@ -517,12 +550,14 @@ function ReviewRow({
   meta,
   impact,
   diagnostic,
+  trustLabel,
   tone,
 }: {
   title: string;
   meta: string;
   impact: string;
   diagnostic: string;
+  trustLabel: string;
   tone: "success" | "warning" | "progress";
 }) {
   return (
@@ -530,6 +565,7 @@ function ReviewRow({
       <div>
         <h3>{title}</h3>
         <p>{meta}</p>
+        <span className="trust-badge">{trustLabel}</span>
         <span>{diagnostic}</span>
       </div>
       <strong>{impact}</strong>

@@ -1,0 +1,199 @@
+{
+  "version": "2026-06-fp-9",
+  "requirements": [
+    {
+      "requirementId": "REQ-FIRE-001",
+      "source": "IMPLEMENTATION_HANDOFF.md FIRE planner MVP",
+      "epic": "FP-1, FP-6, FP-8, FP-9",
+      "dataRule": "Project FI target, FI age, CPF bucket, scenario deltas, and expense updates from validated planner inputs.",
+      "acceptanceCriteriaId": "AC-FIRE-001",
+      "automatedTestIds": [
+        "tests/planner/projectionEngine.test.ts",
+        "tests/planner/scenarioComparison.test.ts",
+        "tests/planner/expenseSnapshotConnector.test.ts",
+        "tests/integration/importToProjection.test.ts"
+      ],
+      "manualEvidence": "Desktop dashboard and impact preview review against synthetic planner profile.",
+      "uiSurface": "Mobile Home, Desktop Dashboard, Review Impact Preview",
+      "releaseGate": "Planner tests pass and import-to-projection synthetic fixture demonstrates expense update.",
+      "owner": "full-stack-delivery"
+    },
+    {
+      "requirementId": "REQ-INGEST-001",
+      "source": "StatementSensei integration scope",
+      "epic": "FP-4, FP-9",
+      "dataRule": "Parser requests and responses use the documented bridge schema and commit normalized rows with import audit metadata.",
+      "acceptanceCriteriaId": "AC-INGEST-001",
+      "automatedTestIds": [
+        "tests/ingestion/parserBridge.test.ts",
+        "tests/ingestion/importWorkflow.test.ts",
+        "tests/ingestion/duplicateDetection.test.ts",
+        "tests/integration/importToProjection.test.ts"
+      ],
+      "manualEvidence": "Synthetic StatementSensei success fixture imports through preview and commit flow.",
+      "uiSurface": "Review Inbox",
+      "releaseGate": "Parser bridge, duplicate detection, and import workflow tests pass.",
+      "owner": "full-stack-delivery"
+    },
+    {
+      "requirementId": "REQ-TXN-001",
+      "source": "Transaction categorization requirement",
+      "epic": "FP-5, FP-9",
+      "dataRule": "Categorization applies user rules, merchant heuristics, MCC defaults, then review fallback in priority order.",
+      "acceptanceCriteriaId": "AC-TXN-001",
+      "automatedTestIds": [
+        "tests/transactions/categorization.test.ts",
+        "tests/merchant/merchantHeuristics.test.ts",
+        "tests/merchant/learningLoop.test.ts"
+      ],
+      "manualEvidence": "Review correction dialog shows category changes and recalculation trigger.",
+      "uiSurface": "Review Inbox Correction Dialog",
+      "releaseGate": "Categorization and learning-loop tests pass.",
+      "owner": "business-analysis"
+    },
+    {
+      "requirementId": "REQ-REFUND-001",
+      "source": "User change request: refunds net off existing amount",
+      "epic": "FP-5, FP-6, FP-9",
+      "dataRule": "Matched refunds reduce net spend for the original purchase period and unmatched or rejected refunds do not reduce spend.",
+      "acceptanceCriteriaId": "AC-REFUND-001",
+      "automatedTestIds": [
+        "tests/transactions/refundMatcher.test.ts",
+        "tests/transactions/netSpend.test.ts",
+        "tests/integration/importToProjection.test.ts"
+      ],
+      "manualEvidence": "Review Inbox shows refund exceptions and impact preview shows net-spend delta.",
+      "uiSurface": "Review Inbox, Review Impact Preview",
+      "releaseGate": "Refund matcher and net-spend tests pass.",
+      "owner": "quality-assurance"
+    },
+    {
+      "requirementId": "REQ-MILES-001",
+      "source": "User change request: no miles for refunded transactions",
+      "epic": "FP-5, FP-7, FP-9",
+      "dataRule": "Refunded and explicitly ineligible transactions create excluded or reversal ledger entries instead of new earned miles.",
+      "acceptanceCriteriaId": "AC-MILES-001",
+      "automatedTestIds": [
+        "tests/rewards/formulaEvaluator.test.ts",
+        "tests/rewards/rewardLedger.test.ts",
+        "tests/transactions/refundMatcher.test.ts"
+      ],
+      "manualEvidence": "Cards tab and review impact preview show miles impact after refund correction.",
+      "uiSurface": "Cards Tab, Review Impact Preview",
+      "releaseGate": "Reward formula, ledger, and refund tests pass.",
+      "owner": "quality-assurance"
+    },
+    {
+      "requirementId": "REQ-MILES-002",
+      "source": "User change request: Singapore card miles formulas",
+      "epic": "FP-7, FP-9",
+      "dataRule": "Card rules store source metadata, category/channel eligibility, caps, base rates, bonus rates, rounding, and transfer blocks.",
+      "acceptanceCriteriaId": "AC-MILES-002",
+      "automatedTestIds": [
+        "tests/rewards/cardRuleCatalogue.test.ts",
+        "tests/rewards/formulaEvaluator.test.ts",
+        "tests/rewards/goldenFormulaFixtures.test.ts"
+      ],
+      "manualEvidence": "Cards tab shows accumulated miles and rule caveats for seeded Singapore cards.",
+      "uiSurface": "Cards Tab",
+      "releaseGate": "Golden formula fixtures match current card rule outputs.",
+      "owner": "delivery-data-analysis"
+    },
+    {
+      "requirementId": "REQ-MILES-003",
+      "source": "User change request: accumulated, redeemable, and next chunk miles",
+      "epic": "FP-7, FP-9",
+      "dataRule": "Reward projection aggregates pending, confirmed, reversed, redeemable miles, and spend required for the next transfer block.",
+      "acceptanceCriteriaId": "AC-MILES-003",
+      "automatedTestIds": [
+        "tests/rewards/redeemableProjection.test.ts",
+        "tests/rewards/rewardLedger.test.ts"
+      ],
+      "manualEvidence": "Cards tab shows next redeemable chunk and reward status totals.",
+      "uiSurface": "Cards Tab",
+      "releaseGate": "Redeemable projection tests pass for exact block and next-block cases.",
+      "owner": "delivery-data-analysis"
+    },
+    {
+      "requirementId": "REQ-MCC-001",
+      "source": "User change request: MCC database tagged to merchant text heuristics",
+      "epic": "FP-5, FP-9",
+      "dataRule": "MCC taxonomy and merchant heuristics provide category, miles eligibility, confidence, explanation, and learning-loop updates.",
+      "acceptanceCriteriaId": "AC-MCC-001",
+      "automatedTestIds": [
+        "tests/merchant/mccTaxonomy.test.ts",
+        "tests/merchant/merchantHeuristics.test.ts",
+        "tests/merchant/learningLoop.test.ts"
+      ],
+      "manualEvidence": "Review correction dialog captures MCC correction and future heuristic learning.",
+      "uiSurface": "Review Inbox Correction Dialog",
+      "releaseGate": "MCC seed, heuristic resolution, and learning-loop tests pass.",
+      "owner": "business-analysis"
+    },
+    {
+      "requirementId": "REQ-UI-001",
+      "source": "Approved UI direction: mobile landing page",
+      "epic": "FP-2, FP-8, FP-9",
+      "dataRule": "Mobile Home presents FIRE progress without a duplicate Fire Progress card or unnecessary percentage line chart.",
+      "acceptanceCriteriaId": "AC-UI-001",
+      "automatedTestIds": [
+        "tests/App.test.tsx",
+        "tests/e2e/app-shell.spec.ts",
+        "tests/ui/designTokens.test.ts"
+      ],
+      "manualEvidence": "Mobile viewport screenshot review for Home, Cards, and Review tabs.",
+      "uiSurface": "Mobile Home, Mobile Cards Tab, Mobile Review Tab",
+      "releaseGate": "Component and Playwright app-shell tests pass.",
+      "owner": "product-design"
+    },
+    {
+      "requirementId": "REQ-UI-002",
+      "source": "Approved UI direction: desktop modern layout with necessary cards only",
+      "epic": "FP-2, FP-8, FP-9",
+      "dataRule": "Desktop dashboard uses the modern visual system with dashboard layout, review workflow, and non-redundant cards.",
+      "acceptanceCriteriaId": "AC-UI-002",
+      "automatedTestIds": [
+        "tests/App.test.tsx",
+        "tests/e2e/app-shell.spec.ts",
+        "tests/review/reviewInboxModel.test.ts",
+        "tests/review/impactPreview.test.ts"
+      ],
+      "manualEvidence": "Desktop viewport screenshot review for dashboard, review inbox, and correction dialog.",
+      "uiSurface": "Desktop Dashboard, Desktop Review Inbox, Correction Dialog",
+      "releaseGate": "Component, review model, impact preview, and Playwright tests pass.",
+      "owner": "product-design"
+    },
+    {
+      "requirementId": "REQ-DB-001",
+      "source": "Database solution decision",
+      "epic": "FP-3, FP-9",
+      "dataRule": "SQLite stores local-first profiles, imports, transactions, MCC/merchant seeds, card rules, reward ledger, and planner snapshots with constraints.",
+      "acceptanceCriteriaId": "AC-DB-001",
+      "automatedTestIds": [
+        "tests/db/database.test.ts",
+        "tests/db/exportImport.test.ts",
+        "tests/integration/importToProjection.test.ts"
+      ],
+      "manualEvidence": "Migration dry run against a temporary database.",
+      "uiSurface": "Local Data Layer",
+      "releaseGate": "Database tests pass and migration command succeeds on a temporary database.",
+      "owner": "solution-architecture"
+    },
+    {
+      "requirementId": "REQ-SEC-001",
+      "source": "FP-9.2 security controls",
+      "epic": "FP-9",
+      "dataRule": "Do not store source statement files by default, redact sensitive logs, and keep real-data mode gated by encryption readiness.",
+      "acceptanceCriteriaId": "AC-SEC-001",
+      "automatedTestIds": [
+        "tests/security/securityControls.test.ts",
+        "tests/db/exportImport.test.ts",
+        "tests/ingestion/parserBridge.test.ts"
+      ],
+      "manualEvidence": "SECURITY_CONTROLS.md review and log/export scan evidence.",
+      "uiSurface": "Import Workflow, Local Export, Security Controls",
+      "releaseGate": "Security tests pass and real-data mode remains disabled for web or unknown platforms.",
+      "owner": "security-compliance-review"
+    }
+  ]
+}

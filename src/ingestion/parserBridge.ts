@@ -124,7 +124,9 @@ export function sanitizeParserLog(value: string) {
   return value
     .replace(/[A-Fa-f0-9]{32,}/g, "[hash-redacted]")
     .replace(/\/[^\s]+/g, "[path-redacted]")
-    .replace(/\*{0,8}\d{4,}/g, "[account-redacted]");
+    .replace(/\*{0,8}\d{4,}/g, "[account-redacted]")
+    .replace(/\b(PAYNOW|PAYLAH|GIRO|FAST)\s+(TRANSFER|PAYMENT)\s+[A-Z][A-Z\s'.-]+/gi, "$1 $2 [description-redacted]")
+    .replace(/"descriptionRaw"\s*:\s*"[^"]+"/g, '"descriptionRaw": "[description-redacted]"');
 }
 
 function runParserProcess({

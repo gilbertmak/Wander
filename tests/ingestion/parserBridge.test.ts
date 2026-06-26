@@ -133,4 +133,16 @@ describe("parser bridge", () => {
       ),
     ).toBe("failed [path-redacted] hash [hash-redacted] card [account-redacted]");
   });
+
+  it("redacts raw transfer descriptions from parser logs", () => {
+    const redacted = sanitizeParserLog(
+      'transaction {"descriptionRaw":"PAYNOW TRANSFER JOHN TAN 91234567","sourceFilePath":"/Users/person/statement.pdf"}',
+    );
+
+    expect(redacted).not.toContain("JOHN TAN");
+    expect(redacted).not.toContain("91234567");
+    expect(redacted).not.toContain("/Users/person/statement.pdf");
+    expect(redacted).toContain("[description-redacted]");
+    expect(redacted).toContain("[path-redacted]");
+  });
 });

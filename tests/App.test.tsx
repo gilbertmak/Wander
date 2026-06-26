@@ -11,6 +11,9 @@ describe("App shell", () => {
 
     expect(screen.getByRole("heading", { name: /FIRE and miles/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "49%" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Latest import mostly verified" }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Confirm May expense snapshot/i)).toBeInTheDocument();
   });
 
@@ -67,7 +70,9 @@ describe("Epic 2 app shell", () => {
     await userEvent.click(within(mobileNav).getByRole("button", { name: "Cards" }));
 
     expect(screen.getByRole("heading", { name: "Miles runway" })).toBeInTheDocument();
-    expect(within(screen.getByLabelText("Miles summary")).getByText("48,000 mi")).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("Miles summary")).getByText("48,000 mi"),
+    ).toBeInTheDocument();
     expect(screen.getByText(/S\$50 to next 5,000-point block/i)).toBeInTheDocument();
   });
 
@@ -78,7 +83,10 @@ describe("Epic 2 app shell", () => {
     expect(screen.getByRole("heading", { name: /3 items need confirmation/i })).toBeInTheDocument();
     expect(screen.getByLabelText("Insights")).toBeInTheDocument();
     expect(screen.getByText(/Matched merchant text/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /annual expenses \+S\$6,000/i })).toBeInTheDocument();
+    expect(screen.getByText("Needs review")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /annual expenses \+S\$6,000/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Monthly net spend")).toBeInTheDocument();
   });
 

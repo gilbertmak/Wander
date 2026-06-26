@@ -15,7 +15,8 @@
   --color-blue-progress: #38bdf8;
   --color-amber-warning: #f59e0b;
   --color-red-reversal: #ef4444;
-  --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ui:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-caption: 0.75rem;
   --font-body: 0.95rem;
   --font-body-large: 1.05rem;
@@ -617,6 +618,11 @@ h2 {
   color: var(--color-emerald);
 }
 
+.import-quality strong {
+  color: var(--color-amber-warning);
+  white-space: nowrap;
+}
+
 .card-stack strong {
   color: var(--color-gold);
   white-space: nowrap;
@@ -924,6 +930,18 @@ h2 {
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--font-caption);
+}
+
+.review-row .trust-badge {
+  display: inline-block;
+  width: fit-content;
+  margin: var(--space-xs) 0;
+  border: 1px solid rgba(242, 201, 76, 0.28);
+  border-radius: var(--radius-pill);
+  background: rgba(242, 201, 76, 0.1);
+  color: var(--color-gold);
+  padding: 2px 8px;
+  font-weight: 800;
 }
 
 .review-row strong {
