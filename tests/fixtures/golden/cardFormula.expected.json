@@ -1,0 +1,20 @@
+{
+  "citiRewardsOnline250": {
+    "milesEarned": 1000,
+    "pointsEarned": 2500,
+    "bonusSpendMinor": 25000,
+    "excessSpendMinor": 0
+  },
+  "dbsCapOverflow": {
+    "milesEarned": 440,
+    "pointsEarned": 220,
+    "bonusSpendMinor": 10000,
+    "excessSpendMinor": 10000
+  },
+  "uobAggregateTwoSmallDining": {
+    "milesEarned": 20,
+    "pointsEarned": 10,
+    "qualifiedSpendMinor": 500,
+    "roundedSpendMinor": 500
+  }
+}

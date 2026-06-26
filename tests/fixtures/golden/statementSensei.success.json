@@ -1,0 +1,50 @@
+{
+  "requestId": "parse_fixture_001",
+  "status": "success",
+  "parserName": "StatementSenseiBridge",
+  "parserVersion": "0.1.0",
+  "bankName": "DBS",
+  "accountHints": [
+    {
+      "accountType": "credit_card",
+      "maskedIdentifier": "**** 1234",
+      "currency": "SGD"
+    }
+  ],
+  "transactions": [
+    {
+      "externalId": "row_grocery",
+      "postedDate": "2026-06-01",
+      "transactionDate": "2026-06-01",
+      "descriptionRaw": "FAIRPRICE FINEST",
+      "amount": "-120.00",
+      "currency": "SGD",
+      "direction": "debit",
+      "accountHint": "**** 1234",
+      "confidenceScore": 0.96
+    },
+    {
+      "externalId": "row_grab",
+      "postedDate": "2026-06-03",
+      "transactionDate": "2026-06-03",
+      "descriptionRaw": "GRAB *TRIP SINGAPORE",
+      "amount": "-18.40",
+      "currency": "SGD",
+      "direction": "debit",
+      "accountHint": "**** 1234",
+      "confidenceScore": 0.92
+    },
+    {
+      "externalId": "row_refund",
+      "postedDate": "2026-06-05",
+      "transactionDate": "2026-06-05",
+      "descriptionRaw": "FAIRPRICE REFUND",
+      "amount": "20.00",
+      "currency": "SGD",
+      "direction": "credit",
+      "accountHint": "**** 1234",
+      "confidenceScore": 0.91
+    }
+  ],
+  "warnings": []
+}
