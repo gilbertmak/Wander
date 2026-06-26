@@ -19,13 +19,15 @@ describe("SQLite database layer", () => {
     const firstRun = runMigrations(connection);
     const secondRun = runMigrations(connection);
 
-    expect(firstRun.applied).toEqual(["0001"]);
+    expect(firstRun.applied).toEqual(["0001", "0002"]);
     expect(firstRun.skipped).toEqual([]);
     expect(secondRun.applied).toEqual([]);
-    expect(secondRun.skipped).toEqual(["0001"]);
+    expect(secondRun.skipped).toEqual(["0001", "0002"]);
 
     const tableCount = connection.sqlite
-      .prepare("SELECT count(*) as count FROM sqlite_master WHERE type = 'table' AND name = 'profiles'")
+      .prepare(
+        "SELECT count(*) as count FROM sqlite_master WHERE type = 'table' AND name = 'profiles'",
+      )
       .get() as { count: number };
 
     expect(tableCount.count).toBe(1);
@@ -95,6 +97,33 @@ describe("SQLite database layer", () => {
       needsReview: true,
       transactionFingerprint: "fingerprint_1",
     });
+    repositories.statementReconciliations.create({
+      id: "reconciliation_1",
+      profileId: "profile_1",
+      statementImportId: "import_1",
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-30",
+      openingBalanceMinor: 100_000,
+      closingBalanceMinor: 98_160,
+      debitTotalMinor: 1_840,
+      creditTotalMinor: 0,
+      feeTotalMinor: 0,
+      rowCount: 1,
+      duplicateCount: 0,
+      unexplainedDeltaMinor: 0,
+      status: "verified",
+      confidenceScore: 1,
+      issueJson: "[]",
+    });
+    repositories.transactionTrustScores.create({
+      id: "trust_1",
+      profileId: "profile_1",
+      statementImportId: "import_1",
+      transactionId: "transaction_1",
+      score: 0.91,
+      label: "high_trust",
+      driverJson: JSON.stringify(["Trust score 91%."]),
+    });
     repositories.rewardLedger.create({
       id: "ledger_1",
       profileId: "profile_1",
@@ -115,6 +144,12 @@ describe("SQLite database layer", () => {
     expect(repositories.accounts.listForProfile("profile_1")).toHaveLength(1);
     expect(repositories.expenseSnapshots.listForProfile("profile_1")).toHaveLength(1);
     expect(repositories.transactions.listReviewItems("profile_1")).toHaveLength(1);
+    expect(repositories.statementReconciliations.getByImportId("import_1")?.status).toBe(
+      "verified",
+    );
+    expect(repositories.transactionTrustScores.getByTransactionId("transaction_1")?.label).toBe(
+      "high_trust",
+    );
     expect(repositories.rewardLedger.listForProfile("profile_1")).toHaveLength(1);
   });
 
@@ -155,7 +190,16 @@ describe("SQLite database layer", () => {
            (id, profile_id, source_file_hash, source_filename, bank_name, parser_name, parser_version, import_status)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run("import_invalid", "profile_1", "hash_invalid", "dbs.pdf", "DBS", "Parser", "0.1.0", "unknown"),
+        .run(
+          "import_invalid",
+          "profile_1",
+          "hash_invalid",
+          "dbs.pdf",
+          "DBS",
+          "Parser",
+          "0.1.0",
+          "unknown",
+        ),
     ).toThrow(/constraint/i);
 
     expect(() =>

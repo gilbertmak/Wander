@@ -8,7 +8,10 @@ import {
   commitImportPreview,
   type ImportPreview,
 } from "../../src/ingestion/importWorkflow";
-import type { ParseStatementRequest, ParseStatementSuccess } from "../../src/ingestion/parserBridge";
+import type {
+  ParseStatementRequest,
+  ParseStatementSuccess,
+} from "../../src/ingestion/parserBridge";
 
 describe("statement import workflow", () => {
   let connection: DatabaseConnection;
@@ -63,11 +66,45 @@ describe("statement import workflow", () => {
     expect(result.statementImportId).toBe(preview.statementImport.id);
     expect(result.accountIds).toHaveLength(1);
     expect(result.transactionIds).toHaveLength(2);
+    expect(result.reconciliationId).toMatch(/^reconciliation_/);
+    expect(result.trustScoreIds).toHaveLength(2);
     expect(
-      repositories.statementImports.getByProfileAndHash("profile_001", request.sourceFileSha256)?.bankName,
+      repositories.statementImports.getByProfileAndHash("profile_001", request.sourceFileSha256)
+        ?.bankName,
     ).toBe("DBS");
     expect(repositories.accounts.listForProfile("profile_001")).toHaveLength(1);
     expect(repositories.transactions.listReviewItems("profile_001")).toHaveLength(1);
+    expect(
+      repositories.statementReconciliations.getByImportId(result.statementImportId),
+    ).toMatchObject({
+      rowCount: 2,
+      status: "mostly_verified",
+      issueJson: JSON.stringify(["Statement balances unavailable; row-level checks only."]),
+    });
+    expect(
+      repositories.transactionTrustScores.listForImport(result.statementImportId),
+    ).toHaveLength(2);
+  });
+
+  it("persists verified reconciliation when statement balances are supplied", () => {
+    const preview = buildImportPreview(request, successResult);
+    const result = commitImportPreview(connection, preview, {
+      reconciliation: {
+        openingBalanceMinor: 100_000,
+        closingBalanceMinor: 111_060,
+      },
+    });
+
+    expect(
+      createRepositories(connection).statementReconciliations.getByImportId(
+        result.statementImportId,
+      ),
+    ).toMatchObject({
+      openingBalanceMinor: 100_000,
+      closingBalanceMinor: 111_060,
+      unexplainedDeltaMinor: 0,
+      status: "verified",
+    });
   });
 
   it("rolls back the import if transaction persistence fails", () => {
