@@ -16,6 +16,14 @@ export const ledgerTypeValues = ["earn", "reversal", "adjustment"] as const;
 export const ledgerStatusValues = ["pending", "posted", "reversed", "excluded"] as const;
 export const reconciliationStatusValues = ["verified", "mostly_verified", "needs_review"] as const;
 export const trustLabelValues = ["high_trust", "medium_trust", "needs_review"] as const;
+export const refundTimelineStatusValues = [
+  "none",
+  "matched",
+  "partial",
+  "missing",
+  "unmatched",
+  "rejected",
+] as const;
 
 const now = sql`CURRENT_TIMESTAMP`;
 
@@ -408,6 +416,41 @@ export const refundMatches = sqliteTable(
   ],
 );
 
+export const refundTimelines = sqliteTable(
+  "refund_timelines",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    originalTransactionId: text("original_transaction_id").references(() => transactions.id, {
+      onDelete: "set null",
+    }),
+    refundTransactionId: text("refund_transaction_id").references(() => transactions.id, {
+      onDelete: "set null",
+    }),
+    refundMatchId: text("refund_match_id").references(() => refundMatches.id, {
+      onDelete: "set null",
+    }),
+    status: text("status").notNull(),
+    expectedRefundMinor: integer("expected_refund_minor").notNull().default(0),
+    receivedRefundMinor: integer("received_refund_minor").notNull().default(0),
+    remainingEligibleSpendMinor: integer("remaining_eligible_spend_minor").notNull().default(0),
+    milesReversal: integer("miles_reversal").notNull().default(0),
+    confidenceScore: real("confidence_score").notNull(),
+    eventJson: text("event_json").notNull().default("[]"),
+    caveatJson: text("caveat_json").notNull().default("[]"),
+    calculatedAt: text("calculated_at").notNull(),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [
+    index("refund_timelines_profile_status_idx").on(table.profileId, table.status),
+    index("refund_timelines_original_idx").on(table.originalTransactionId),
+    index("refund_timelines_refund_idx").on(table.refundTransactionId),
+  ],
+);
+
 export const rewardLedger = sqliteTable(
   "reward_ledger",
   {
@@ -476,4 +519,5 @@ export const profileRelations = relations(profiles, ({ many, one }) => ({
   statementReconciliations: many(statementReconciliations),
   transactionTrustScores: many(transactionTrustScores),
   decisionTraces: many(decisionTraces),
+  refundTimelines: many(refundTimelines),
 }));
