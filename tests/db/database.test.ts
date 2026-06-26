@@ -19,13 +19,15 @@ describe("SQLite database layer", () => {
     const firstRun = runMigrations(connection);
     const secondRun = runMigrations(connection);
 
-    expect(firstRun.applied).toEqual(["0001"]);
+    expect(firstRun.applied).toEqual(["0001", "0002"]);
     expect(firstRun.skipped).toEqual([]);
     expect(secondRun.applied).toEqual([]);
-    expect(secondRun.skipped).toEqual(["0001"]);
+    expect(secondRun.skipped).toEqual(["0001", "0002"]);
 
     const tableCount = connection.sqlite
-      .prepare("SELECT count(*) as count FROM sqlite_master WHERE type = 'table' AND name = 'profiles'")
+      .prepare(
+        "SELECT count(*) as count FROM sqlite_master WHERE type = 'table' AND name = 'profiles'",
+      )
       .get() as { count: number };
 
     expect(tableCount.count).toBe(1);
@@ -43,9 +45,9 @@ describe("SQLite database layer", () => {
       currentNetWorthMinor: 110_000_000,
       targetFireNumberMinor: 162_000_000,
       annualExpensesMinor: 5_670_000,
-      safeWithdrawalRate: 0.035,
-      expectedReturnRate: 0.055,
-      inflationRate: 0.025,
+      safeWithdrawalRateBasisPoints: 350,
+      expectedReturnRateBasisPoints: 550,
+      inflationRateBasisPoints: 250,
     });
     repositories.statementImports.create({
       id: "import_1",
@@ -95,6 +97,33 @@ describe("SQLite database layer", () => {
       needsReview: true,
       transactionFingerprint: "fingerprint_1",
     });
+    repositories.statementReconciliations.create({
+      id: "reconciliation_1",
+      profileId: "profile_1",
+      statementImportId: "import_1",
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-30",
+      openingBalanceMinor: 100_000,
+      closingBalanceMinor: 98_160,
+      debitTotalMinor: 1_840,
+      creditTotalMinor: 0,
+      feeTotalMinor: 0,
+      rowCount: 1,
+      duplicateCount: 0,
+      unexplainedDeltaMinor: 0,
+      status: "verified",
+      confidenceScore: 1,
+      issueJson: "[]",
+    });
+    repositories.transactionTrustScores.create({
+      id: "trust_1",
+      profileId: "profile_1",
+      statementImportId: "import_1",
+      transactionId: "transaction_1",
+      score: 0.91,
+      label: "high_trust",
+      driverJson: JSON.stringify(["Trust score 91%."]),
+    });
     repositories.rewardLedger.create({
       id: "ledger_1",
       profileId: "profile_1",
@@ -115,7 +144,186 @@ describe("SQLite database layer", () => {
     expect(repositories.accounts.listForProfile("profile_1")).toHaveLength(1);
     expect(repositories.expenseSnapshots.listForProfile("profile_1")).toHaveLength(1);
     expect(repositories.transactions.listReviewItems("profile_1")).toHaveLength(1);
+    expect(repositories.statementReconciliations.getByImportId("import_1")?.status).toBe(
+      "verified",
+    );
+    expect(repositories.transactionTrustScores.getByTransactionId("transaction_1")?.label).toBe(
+      "high_trust",
+    );
     expect(repositories.rewardLedger.listForProfile("profile_1")).toHaveLength(1);
+  });
+
+  it("stores planner rates as integer basis points and rejects invalid enums", () => {
+    runMigrations(connection);
+    const repositories = createRepositories(connection);
+
+    repositories.profiles.create({ id: "profile_1", name: "Primary", currency: "SGD" });
+    repositories.plannerProfiles.upsert({
+      profileId: "profile_1",
+      currentAge: 36,
+      targetRetirementAge: 45,
+      currentNetWorthMinor: 110_000_000,
+      targetFireNumberMinor: 162_000_000,
+      annualExpensesMinor: 5_670_000,
+      safeWithdrawalRateBasisPoints: 350,
+      expectedReturnRateBasisPoints: 550,
+      inflationRateBasisPoints: 250,
+    });
+
+    const plannerColumns = connection.sqlite
+      .prepare("PRAGMA table_info(planner_profiles)")
+      .all() as Array<{ name: string; type: string }>;
+    const rateColumns = plannerColumns
+      .filter((column) => column.name.includes("rate"))
+      .map((column) => ({ name: column.name, type: column.type }));
+
+    expect(rateColumns).toEqual([
+      { name: "safe_withdrawal_rate_basis_points", type: "INTEGER" },
+      { name: "expected_return_rate_basis_points", type: "INTEGER" },
+      { name: "inflation_rate_basis_points", type: "INTEGER" },
+    ]);
+
+    expect(() =>
+      connection.sqlite
+        .prepare(
+          `INSERT INTO statement_imports
+           (id, profile_id, source_file_hash, source_filename, bank_name, parser_name, parser_version, import_status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          "import_invalid",
+          "profile_1",
+          "hash_invalid",
+          "dbs.pdf",
+          "DBS",
+          "Parser",
+          "0.1.0",
+          "unknown",
+        ),
+    ).toThrow(/constraint/i);
+
+    expect(() =>
+      connection.sqlite
+        .prepare(
+          `INSERT INTO transactions
+           (id, profile_id, posted_date, description_raw, description_normalized, amount_minor, currency,
+            direction, transaction_kind, transaction_fingerprint)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          "transaction_invalid_direction",
+          "profile_1",
+          "2026-06-20",
+          "Test",
+          "test",
+          -100,
+          "SGD",
+          "outflow",
+          "purchase",
+          "fingerprint_invalid_direction",
+        ),
+    ).toThrow(/constraint/i);
+
+    expect(() =>
+      connection.sqlite
+        .prepare(
+          `INSERT INTO transactions
+           (id, profile_id, posted_date, description_raw, description_normalized, amount_minor, currency,
+            direction, transaction_kind, transaction_fingerprint)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          "transaction_invalid_kind",
+          "profile_1",
+          "2026-06-20",
+          "Test",
+          "test",
+          -100,
+          "SGD",
+          "debit",
+          "bonus",
+          "fingerprint_invalid_kind",
+        ),
+    ).toThrow(/constraint/i);
+
+    connection.sqlite
+      .prepare(
+        `INSERT INTO transactions
+         (id, profile_id, posted_date, description_raw, description_normalized, amount_minor, currency,
+          direction, transaction_kind, transaction_fingerprint)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "transaction_purchase",
+        "profile_1",
+        "2026-06-20",
+        "Purchase",
+        "purchase",
+        -100,
+        "SGD",
+        "debit",
+        "purchase",
+        "fingerprint_purchase",
+      );
+    connection.sqlite
+      .prepare(
+        `INSERT INTO transactions
+         (id, profile_id, posted_date, description_raw, description_normalized, amount_minor, currency,
+          direction, transaction_kind, transaction_fingerprint)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "transaction_refund",
+        "profile_1",
+        "2026-06-21",
+        "Refund",
+        "refund",
+        100,
+        "SGD",
+        "credit",
+        "refund",
+        "fingerprint_refund",
+      );
+
+    expect(() =>
+      connection.sqlite
+        .prepare(
+          `INSERT INTO refund_matches
+           (id, profile_id, refund_transaction_id, original_transaction_id, matched_amount_minor,
+            match_confidence, match_method, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          "refund_match_invalid",
+          "profile_1",
+          "transaction_refund",
+          "transaction_purchase",
+          100,
+          1,
+          "exact",
+          "closed",
+        ),
+    ).toThrow(/constraint/i);
+
+    expect(() =>
+      connection.sqlite
+        .prepare(
+          `INSERT INTO reward_ledger
+           (id, profile_id, ledger_type, points, miles_equivalent, status)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run("ledger_invalid_type", "profile_1", "bonus", 1, 1, "pending"),
+    ).toThrow(/constraint/i);
+
+    expect(() =>
+      connection.sqlite
+        .prepare(
+          `INSERT INTO reward_ledger
+           (id, profile_id, ledger_type, points, miles_equivalent, status)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run("ledger_invalid_status", "profile_1", "earn", 1, 1, "closed"),
+    ).toThrow(/constraint/i);
   });
 
   it("rejects duplicate statement file hashes per profile", () => {

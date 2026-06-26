@@ -10,6 +10,7 @@ const tableNames = [
   "planner_profiles",
   "expense_snapshots",
   "statement_imports",
+  "statement_reconciliations",
   "accounts",
   "categories",
   "mcc_codes",
@@ -18,6 +19,7 @@ const tableNames = [
   "cards",
   "card_rules",
   "transactions",
+  "transaction_trust_scores",
   "refund_matches",
   "reward_ledger",
   "redemption_programs",
@@ -92,7 +94,10 @@ export function importLocalData(connection: DatabaseConnection, candidate: unkno
 
   return {
     importedTables: importOrder.length,
-    importedRows: importOrder.reduce((count, tableName) => count + artifact.data[tableName].length, 0),
+    importedRows: importOrder.reduce(
+      (count, tableName) => count + artifact.data[tableName].length,
+      0,
+    ),
   };
 }
 

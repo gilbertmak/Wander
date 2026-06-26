@@ -8,7 +8,9 @@ import {
   plannerProfiles,
   profiles,
   rewardLedger,
+  statementReconciliations,
   statementImports,
+  transactionTrustScores,
   transactions,
 } from "./schema";
 
@@ -17,8 +19,10 @@ export type NewProfile = InferInsertModel<typeof profiles>;
 export type NewPlannerProfile = InferInsertModel<typeof plannerProfiles>;
 export type NewExpenseSnapshot = InferInsertModel<typeof expenseSnapshots>;
 export type NewStatementImport = InferInsertModel<typeof statementImports>;
+export type NewStatementReconciliation = InferInsertModel<typeof statementReconciliations>;
 export type NewAccount = InferInsertModel<typeof accounts>;
 export type NewTransaction = InferInsertModel<typeof transactions>;
+export type NewTransactionTrustScore = InferInsertModel<typeof transactionTrustScores>;
 export type NewRewardLedgerEntry = InferInsertModel<typeof rewardLedger>;
 
 export function createRepositories(connection: DatabaseConnection) {
@@ -27,8 +31,10 @@ export function createRepositories(connection: DatabaseConnection) {
     plannerProfiles: createPlannerProfileRepository(connection),
     expenseSnapshots: createExpenseSnapshotRepository(connection),
     statementImports: createStatementImportRepository(connection),
+    statementReconciliations: createStatementReconciliationRepository(connection),
     accounts: createAccountRepository(connection),
     transactions: createTransactionRepository(connection),
+    transactionTrustScores: createTransactionTrustScoreRepository(connection),
     rewardLedger: createRewardLedgerRepository(connection),
   };
 }
@@ -53,7 +59,11 @@ function createPlannerProfileRepository(connection: DatabaseConnection) {
         .returning()
         .get(),
     getByProfileId: (profileId: string) =>
-      connection.db.select().from(plannerProfiles).where(eq(plannerProfiles.profileId, profileId)).get(),
+      connection.db
+        .select()
+        .from(plannerProfiles)
+        .where(eq(plannerProfiles.profileId, profileId))
+        .get(),
   };
 }
 
@@ -89,6 +99,19 @@ function createStatementImportRepository(connection: DatabaseConnection) {
   };
 }
 
+function createStatementReconciliationRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewStatementReconciliation) =>
+      connection.db.insert(statementReconciliations).values(value).returning().get(),
+    getByImportId: (statementImportId: string) =>
+      connection.db
+        .select()
+        .from(statementReconciliations)
+        .where(eq(statementReconciliations.statementImportId, statementImportId))
+        .get(),
+  };
+}
+
 function createAccountRepository(connection: DatabaseConnection) {
   return {
     create: (value: NewAccount) => connection.db.insert(accounts).values(value).returning().get(),
@@ -99,7 +122,8 @@ function createAccountRepository(connection: DatabaseConnection) {
 
 function createTransactionRepository(connection: DatabaseConnection) {
   return {
-    create: (value: NewTransaction) => connection.db.insert(transactions).values(value).returning().get(),
+    create: (value: NewTransaction) =>
+      connection.db.insert(transactions).values(value).returning().get(),
     getByFingerprint: (profileId: string, transactionFingerprint: string) =>
       connection.db
         .select()
@@ -118,6 +142,25 @@ function createTransactionRepository(connection: DatabaseConnection) {
         .where(and(eq(transactions.profileId, profileId), eq(transactions.needsReview, true)))
         .orderBy(desc(transactions.postedDate))
         .all(),
+  };
+}
+
+function createTransactionTrustScoreRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewTransactionTrustScore) =>
+      connection.db.insert(transactionTrustScores).values(value).returning().get(),
+    listForImport: (statementImportId: string) =>
+      connection.db
+        .select()
+        .from(transactionTrustScores)
+        .where(eq(transactionTrustScores.statementImportId, statementImportId))
+        .all(),
+    getByTransactionId: (transactionId: string) =>
+      connection.db
+        .select()
+        .from(transactionTrustScores)
+        .where(eq(transactionTrustScores.transactionId, transactionId))
+        .get(),
   };
 }
 

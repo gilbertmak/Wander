@@ -1,0 +1,2324 @@
+{
+  "metadata": {
+    "name": "fire-planner-implementation-evals",
+    "version": "0.1.0",
+    "sourceDocument": "docs/IMPLEMENTATION_HANDOFF.md",
+    "createdDate": "2026-06-25",
+    "specialists": ["QA strategy", "transaction-classification systems"],
+    "purpose": "Acceptance and regression eval suite for the FIRE planner, statement ingestion, merchant/MCC classification, miles engine, planner integration, and responsive UI described in the implementation handoff."
+  },
+  "gradingModes": {
+    "binary": {
+      "scoreValues": [0, 1],
+      "passCondition": "Score 1 only when every listed expected result and pass criterion is satisfied. Partial behavior scores 0."
+    },
+    "llm_judge": {
+      "scoreValues": [1, 2, 3, 4, 5],
+      "passCondition": "Score at least 4 with no safety, privacy, or miles-eligibility critical error."
+    }
+  },
+  "judgeRubrics": {
+    "merchant_category_mcc": {
+      "graderType": "llm_judge",
+      "judgePrompt": "You are evaluating a Singapore personal-finance transaction classifier. Given the raw transaction, proposed canonical merchant, category, MCC code, MCC title, miles eligibility, confidence, and evidence, grade whether the classification is commercially plausible and safe for downstream credit-card rewards calculations. Use bank/network MCC conventions when known, but allow ambiguity when the transaction text does not prove the exact acquiring MCC. Penalize overconfident claims, mismatched MCC/category pairs, missing uncertainty, and missed review flags.",
+      "scoring": {
+        "5": "Classification is highly plausible, merchant normalization is clean, MCC/category/eligibility align, confidence is calibrated, and ambiguity is documented.",
+        "4": "Classification is plausible with minor uncertainty; any ambiguity is reviewable and unlikely to materially overstate rewards.",
+        "3": "Classification may be plausible but lacks enough evidence, confidence is too high, or MCC/category alignment is weak.",
+        "2": "Classification likely maps to the wrong merchant family, spend category, MCC family, or miles eligibility.",
+        "1": "Classification is plainly wrong or unsafe for financial/rewards use."
+      },
+      "criticalFailures": [
+        "Marks clearly excluded financial, tax, government, insurance, education, gambling, or quasi-cash spend as eligible without a rule-backed caveat.",
+        "Invents a precise MCC for an ambiguous merchant descriptor without evidence or review flag.",
+        "Confuses refunds, payments, or bank fees with merchant purchases."
+      ]
+    }
+  },
+  "evals": [
+    {
+      "id": "ARCH-001",
+      "area": "architecture",
+      "priority": "blocker",
+      "requirementRefs": ["4.0", "6.1", "6.2"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "static-analysis",
+      "scenario": "V1 runtime uses a React/Vite/TypeScript UI plus a local Node API ownership boundary for SQLite and parser invocation.",
+      "input": {
+        "files": ["package.json", "src", "server or api entrypoint"]
+      },
+      "expected": [
+        "Frontend remains React, Vite, and TypeScript.",
+        "SQLite writes are owned by a Node-side API or local service boundary.",
+        "Python parser execution is mediated through the Node API or parser bridge rather than direct UI invocation.",
+        "Native packaging is absent or explicitly deferred."
+      ],
+      "passCriteria": [
+        "No browser UI code imports native SQLite drivers.",
+        "No browser UI code spawns Python or accesses local statement files directly."
+      ]
+    },
+    {
+      "id": "ARCH-002",
+      "area": "module-boundaries",
+      "priority": "blocker",
+      "requirementRefs": ["4.5", "6.2"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "static-analysis",
+      "scenario": "Domain modules remain pure and do not import UI, database drivers, process APIs, or parser process code.",
+      "input": {
+        "files": ["src/domain/**", "src/ui/**", "src/db/**", "src/parser/**", "src/ingestion/**"]
+      },
+      "expected": [
+        "domain modules import only pure domain dependencies.",
+        "db modules contain schema, migrations, repositories, and transaction boundaries.",
+        "state modules store UI session state only.",
+        "ui modules access domain behavior through hooks, use cases, or API clients."
+      ],
+      "passCriteria": [
+        "Import graph check has zero forbidden dependencies.",
+        "Rewards module consumes resolved transaction views and card rules, not raw parser payloads.",
+        "Planner module consumes accepted expense snapshots, not raw transactions."
+      ]
+    },
+    {
+      "id": "ARCH-003",
+      "area": "data-ownership",
+      "priority": "blocker",
+      "requirementRefs": ["4.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Each module owns only its assigned data and recalculation responsibility.",
+      "input": {
+        "events": [
+          "transaction committed",
+          "category corrected",
+          "MCC corrected",
+          "refund matched",
+          "card assignment changed",
+          "card rule version added",
+          "expense snapshot accepted"
+        ]
+      },
+      "expected": [
+        "Transactions module owns canonical transaction metadata and review states.",
+        "MCC module owns taxonomy, heuristics, confidence, and user-corrected heuristic rules.",
+        "Rewards module owns reward ledger and redeemable projections.",
+        "Planner module owns accepted snapshots and scenario results."
+      ],
+      "passCriteria": [
+        "Each event triggers only the documented downstream recalculation jobs.",
+        "No module silently rewrites another module's authoritative data."
+      ]
+    },
+    {
+      "id": "DB-001",
+      "area": "database-schema",
+      "priority": "blocker",
+      "requirementRefs": ["7.1", "7.2", "7.3", "7.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "migration-test",
+      "scenario": "Initial migrations create every required planner, import, transaction, merchant, MCC, card, reward, and redemption table.",
+      "input": {
+        "migrationCommand": "npm run db:migrate",
+        "requiredTables": [
+          "profiles",
+          "planner_profiles",
+          "expense_snapshots",
+          "statement_imports",
+          "accounts",
+          "transactions",
+          "refund_matches",
+          "categories",
+          "mcc_codes",
+          "merchants",
+          "merchant_heuristics",
+          "cards",
+          "card_rules",
+          "reward_ledger",
+          "redemption_programs"
+        ]
+      },
+      "expected": [
+        "All required tables exist after a clean migration.",
+        "Every required entity relationship is represented by a foreign key or documented deferred relationship."
+      ],
+      "passCriteria": [
+        "SQLite schema inspection confirms table and key presence.",
+        "Migration can run from an empty database without manual steps."
+      ]
+    },
+    {
+      "id": "DB-002",
+      "area": "database-schema",
+      "priority": "blocker",
+      "requirementRefs": ["7.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "migration-test",
+      "scenario": "Money, points, miles, rates, dates, and timestamps use storage-safe types.",
+      "input": {
+        "schema": "migrated SQLite schema"
+      },
+      "expected": [
+        "Money is stored as integer minor units plus currency.",
+        "Points, miles, rates, caps, transfer blocks, and rounded formula outputs avoid floating-point storage.",
+        "Transaction and statement dates are ISO YYYY-MM-DD.",
+        "Timestamps are UTC ISO strings."
+      ],
+      "passCriteria": [
+        "No REAL or floating-point database column stores money, points, miles, or rates.",
+        "Invalid date and timestamp values are rejected by validation or repository boundaries."
+      ]
+    },
+    {
+      "id": "DB-003",
+      "area": "database-schema",
+      "priority": "high",
+      "requirementRefs": ["7.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "migration-test",
+      "scenario": "Enum values are centralized and enforced at write boundaries.",
+      "input": {
+        "enumFields": [
+          "direction",
+          "transaction_kind",
+          "import_status",
+          "match_status",
+          "ledger_type",
+          "ledger_status"
+        ]
+      },
+      "expected": [
+        "Allowed enum values are defined centrally.",
+        "Repositories or schema constraints reject unknown values.",
+        "UI filters and labels derive from the same enum source or a generated mirror."
+      ],
+      "passCriteria": [
+        "Invalid enum insert attempts fail deterministically.",
+        "No duplicate hard-coded enum lists drift across modules."
+      ]
+    },
+    {
+      "id": "DB-004",
+      "area": "database-schema",
+      "priority": "high",
+      "requirementRefs": ["7.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "migration-test",
+      "scenario": "Indexes and unique constraints support duplicate detection, review inbox, card calculations, and planner snapshots.",
+      "input": {
+        "requiredIndexesOrConstraints": [
+          "statement_imports(profile_id, source_file_hash) unique",
+          "transactions(profile_id, transaction_fingerprint) unique",
+          "transactions(profile_id, posted_date)",
+          "transactions(profile_id, needs_review)",
+          "transactions(profile_id, card_id, posted_date)",
+          "refund_matches(profile_id, refund_transaction_id)",
+          "reward_ledger(profile_id, transaction_id)",
+          "expense_snapshots(profile_id, period_start, period_end)"
+        ]
+      },
+      "expected": [
+        "Required indexes and uniqueness constraints exist.",
+        "Duplicate file and duplicate transaction attempts are rejected before or during commit."
+      ],
+      "passCriteria": [
+        "Schema inspection confirms each required index or equivalent.",
+        "Duplicate insert tests fail with handled errors, not partial writes."
+      ]
+    },
+    {
+      "id": "DB-005",
+      "area": "database-schema",
+      "priority": "high",
+      "requirementRefs": ["7.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "migration-test",
+      "scenario": "Derived records preserve lineage for audit and recalculation.",
+      "input": {
+        "derivedRecords": [
+          "expense_snapshots",
+          "reward_ledger",
+          "merchant_heuristics",
+          "recalculation_jobs"
+        ]
+      },
+      "expected": [
+        "Derived records include source_module, source_record_id, source_version, and calculated_at when applicable.",
+        "Seeded data has version tracking for MCC taxonomy, merchant heuristics, card rules, and redemption programs."
+      ],
+      "passCriteria": [
+        "Every derived write can be traced to an input record, module, and version.",
+        "Seed changes can be audited by version."
+      ]
+    },
+    {
+      "id": "PARSER-001",
+      "area": "parser-bridge",
+      "priority": "blocker",
+      "requirementRefs": ["6.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "contract-test",
+      "scenario": "Parser bridge accepts the documented request shape and preserves request metadata.",
+      "input": {
+        "request": {
+          "requestId": "parse_2026_0001",
+          "profileId": "profile_001",
+          "sourceType": "pdf",
+          "sourceFilename": "statement.pdf",
+          "sourceFilePath": "/tmp/fire-planner/imports/statement.pdf",
+          "sourceFileSha256": "abc123",
+          "parserOptions": {
+            "ocrEnabled": true,
+            "passwordProvided": false,
+            "locale": "en-SG"
+          }
+        }
+      },
+      "expected": [
+        "Request validates successfully.",
+        "Required fields are present and typed.",
+        "Unsupported sourceType, missing hash, malformed path, or invalid locale are rejected with stable validation errors."
+      ],
+      "passCriteria": [
+        "Valid request reaches bridge execution layer.",
+        "Invalid request fails before child-process invocation."
+      ]
+    },
+    {
+      "id": "PARSER-002",
+      "area": "parser-bridge",
+      "priority": "blocker",
+      "requirementRefs": ["6.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "contract-test",
+      "scenario": "Successful parser result validates against the documented JSON contract.",
+      "input": {
+        "parserResult": {
+          "requestId": "parse_2026_0001",
+          "status": "success",
+          "parserName": "StatementSenseiBridge",
+          "parserVersion": "0.1.0",
+          "bankName": "DBS",
+          "accountHints": [
+            {
+              "accountType": "credit_card",
+              "maskedIdentifier": "**** 1234",
+              "currency": "SGD"
+            }
+          ],
+          "transactions": [
+            {
+              "externalId": "stable-parser-row-id",
+              "postedDate": "2026-06-20",
+              "transactionDate": "2026-06-19",
+              "descriptionRaw": "GRAB *TRIP SINGAPORE",
+              "amount": "-18.40",
+              "currency": "SGD",
+              "direction": "debit",
+              "accountHint": "**** 1234",
+              "confidenceScore": 0.92
+            }
+          ],
+          "warnings": [
+            {
+              "code": "OCR_USED",
+              "message": "OCR fallback used for two pages.",
+              "severity": "info"
+            }
+          ]
+        }
+      },
+      "expected": [
+        "Result validates successfully.",
+        "Parser name, version, bank, account hints, transactions, and warnings are retained.",
+        "Transaction amounts remain decimal strings until app normalization."
+      ],
+      "passCriteria": [
+        "Bridge client returns typed success result.",
+        "Warnings are retained for import audit and UI display."
+      ]
+    },
+    {
+      "id": "PARSER-003",
+      "area": "parser-bridge",
+      "priority": "blocker",
+      "requirementRefs": ["6.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "contract-test",
+      "scenario": "Failed parser result validates and maps to stable retry behavior.",
+      "input": {
+        "parserResult": {
+          "requestId": "parse_2026_0001",
+          "status": "failed",
+          "parserName": "StatementSenseiBridge",
+          "parserVersion": "0.1.0",
+          "error": {
+            "code": "PASSWORD_REQUIRED",
+            "message": "Statement could not be parsed without password.",
+            "retryable": true
+          },
+          "warnings": []
+        }
+      },
+      "expected": [
+        "Failure result validates successfully.",
+        "Stable code maps to a user-facing retry state.",
+        "No transactions are committed."
+      ],
+      "passCriteria": [
+        "Import audit records failed status and error code.",
+        "Retryable flag is preserved."
+      ]
+    },
+    {
+      "id": "PARSER-004",
+      "area": "parser-bridge",
+      "priority": "high",
+      "requirementRefs": ["6.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Parser execution times out and cleans up temporary files.",
+      "input": {
+        "parserBehavior": "child process sleeps longer than configured timeout",
+        "timeoutSeconds": 1
+      },
+      "expected": [
+        "Bridge returns or throws a stable timeout failure.",
+        "Child process is terminated.",
+        "Temp files under the app-controlled import directory are deleted."
+      ],
+      "passCriteria": [
+        "No orphan parser processes remain.",
+        "No temp statement file remains after timeout handling."
+      ]
+    },
+    {
+      "id": "PARSER-005",
+      "area": "parser-bridge",
+      "priority": "high",
+      "requirementRefs": ["6.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "security-test",
+      "scenario": "Parser logs avoid sensitive financial data.",
+      "input": {
+        "transaction": "PAYNOW TRANSFER JOHN TAN 91234567",
+        "sourceFilePath": "/Users/person/Documents/full_statement.pdf",
+        "sourceFileSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      },
+      "expected": [
+        "Logs do not include raw transaction descriptions.",
+        "Logs do not include account numbers, full file paths, or full hashes.",
+        "Request IDs, stable error codes, parser names, and short redacted hashes may appear."
+      ],
+      "passCriteria": ["Automated log scan finds zero sensitive strings."]
+    },
+    {
+      "id": "INGEST-001",
+      "area": "statement-ingestion",
+      "priority": "blocker",
+      "requirementRefs": ["4.2", "6.4", "7.2"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Import stores normalized payload and audit metadata without retaining the original statement file.",
+      "input": {
+        "statementFile": "fixture/dbs-credit-card-june-2026.pdf",
+        "parserResult": "valid success result with OCR warning"
+      },
+      "expected": [
+        "statement_imports stores file hash, filename, bank, parser name, parser version, status, and warnings.",
+        "transactions store normalized transaction rows.",
+        "Original PDF content is not stored in SQLite or app-managed persistent storage."
+      ],
+      "passCriteria": [
+        "Database contains no original PDF blob or full source path.",
+        "Import audit is sufficient to trace parser version and warning history."
+      ]
+    },
+    {
+      "id": "INGEST-002",
+      "area": "statement-ingestion",
+      "priority": "blocker",
+      "requirementRefs": ["7.2", "7.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Duplicate statement file is blocked per profile.",
+      "input": {
+        "profileId": "profile_001",
+        "sourceFileSha256": "same_hash",
+        "imports": ["first import", "second import with identical hash"]
+      },
+      "expected": [
+        "First import commits.",
+        "Second import is marked duplicate or rejected with a duplicate-file error.",
+        "No second copy of transactions is committed."
+      ],
+      "passCriteria": [
+        "Duplicate handling is deterministic and user-reviewable.",
+        "No partial duplicate writes remain."
+      ]
+    },
+    {
+      "id": "INGEST-003",
+      "area": "statement-ingestion",
+      "priority": "high",
+      "requirementRefs": ["7.2", "7.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Duplicate transaction fingerprint is blocked even across different statement files.",
+      "input": {
+        "transactions": [
+          {
+            "postedDate": "2026-06-20",
+            "amount": "-18.40",
+            "descriptionRaw": "GRAB *TRIP SINGAPORE",
+            "accountHint": "**** 1234"
+          },
+          {
+            "postedDate": "2026-06-20",
+            "amount": "-18.40",
+            "descriptionRaw": "GRAB *TRIP SINGAPORE",
+            "accountHint": "**** 1234"
+          }
+        ]
+      },
+      "expected": [
+        "One canonical transaction is created.",
+        "Duplicate row is rejected or surfaced as duplicate review item.",
+        "Import commit stays atomic."
+      ],
+      "passCriteria": [
+        "Unique fingerprint constraint or preflight duplicate detection prevents double-counting expenses and miles."
+      ]
+    },
+    {
+      "id": "INGEST-004",
+      "area": "statement-ingestion",
+      "priority": "high",
+      "requirementRefs": ["4.5", "7.2"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "unit-test",
+      "scenario": "Transaction normalization creates canonical signs, kinds, review flags, and stable descriptions.",
+      "input": {
+        "parserTransactions": [
+          {
+            "descriptionRaw": "  GRAB   *TRIP SINGAPORE ",
+            "amount": "-18.40",
+            "direction": "debit",
+            "confidenceScore": 0.92
+          },
+          {
+            "descriptionRaw": "REFUND GRAB TRIP",
+            "amount": "18.40",
+            "direction": "credit",
+            "confidenceScore": 0.74
+          }
+        ]
+      },
+      "expected": [
+        "Debit row becomes purchase and is eligible for provisional miles only after card and MCC checks.",
+        "Credit row becomes refund and is not treated as a new miles-earning purchase.",
+        "Normalized description is trimmed, whitespace-collapsed, and stable.",
+        "Low-confidence row needs review."
+      ],
+      "passCriteria": ["Normalized transaction output matches expected fields exactly."]
+    },
+    {
+      "id": "INGEST-005",
+      "area": "statement-ingestion",
+      "priority": "medium",
+      "requirementRefs": ["6.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Parser warnings are retained and displayed in import review.",
+      "input": {
+        "warnings": [
+          {
+            "code": "OCR_USED",
+            "message": "OCR fallback used for two pages.",
+            "severity": "info"
+          },
+          {
+            "code": "LOW_CONFIDENCE_ROWS",
+            "message": "Three rows require review.",
+            "severity": "warning"
+          }
+        ]
+      },
+      "expected": [
+        "Warnings persist in import audit.",
+        "Review inbox or import details displays warnings with severity.",
+        "Warnings do not block commit unless configured as fatal."
+      ],
+      "passCriteria": ["User can inspect parser warnings after the import completes."]
+    },
+    {
+      "id": "REFUND-001",
+      "area": "refunds",
+      "priority": "blocker",
+      "requirementRefs": ["4.3", "4.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "domain-test",
+      "scenario": "Full refund nets off original spend category and FIRE expense totals.",
+      "input": {
+        "originalTransaction": {
+          "id": "txn_purchase",
+          "category": "Transport",
+          "amountMinor": -1840,
+          "direction": "debit"
+        },
+        "refundTransaction": {
+          "id": "txn_refund",
+          "amountMinor": 1840,
+          "direction": "credit"
+        }
+      },
+      "expected": [
+        "Refund match status is matched.",
+        "Matched amount is 1840 minor units.",
+        "Net spend for Transport is 0 for the snapshot period.",
+        "Refund transaction does not create new miles."
+      ],
+      "passCriteria": [
+        "Expense snapshot gross_spend, refunds, net_spend, and category totals match expected arithmetic exactly."
+      ]
+    },
+    {
+      "id": "REFUND-002",
+      "area": "refunds",
+      "priority": "high",
+      "requirementRefs": ["4.3"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "domain-test",
+      "scenario": "Partial refund creates a partial match and only reverses the matched amount.",
+      "input": {
+        "originalAmountMinor": -10000,
+        "refundAmountMinor": 3500,
+        "originalMiles": 400
+      },
+      "expected": [
+        "Refund match status is partial.",
+        "Net spend remains 6500 minor units.",
+        "Reward reversal equals the miles attributable to 3500 minor units under the original calculation trace.",
+        "Remaining earned miles are retained."
+      ],
+      "passCriteria": [
+        "No over-reversal occurs.",
+        "Review inbox shows partial refund status and impact preview."
+      ]
+    },
+    {
+      "id": "REFUND-003",
+      "area": "refunds",
+      "priority": "high",
+      "requirementRefs": ["4.3", "5.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Unmatched refund is marked for review and excluded from new miles calculation.",
+      "input": {
+        "refundTransaction": {
+          "descriptionRaw": "REFUND SHOPEE",
+          "amountMinor": 2799,
+          "direction": "credit",
+          "candidateMatches": []
+        }
+      },
+      "expected": [
+        "Refund transaction needs review.",
+        "Refund match status is uncertain or unmatched.",
+        "Refund is excluded from miles earning.",
+        "Review inbox shows match refund action."
+      ],
+      "passCriteria": ["No reward earn ledger entry is created for the refund."]
+    },
+    {
+      "id": "REFUND-004",
+      "area": "refunds",
+      "priority": "high",
+      "requirementRefs": ["4.3", "4.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "domain-test",
+      "scenario": "Refund of a transaction that already earned miles creates an append-only reversal ledger entry.",
+      "input": {
+        "originalLedgerEntry": {
+          "ledgerType": "earn",
+          "milesEquivalent": 72,
+          "status": "posted"
+        },
+        "refund": {
+          "matchedAmountMinor": 1840
+        }
+      },
+      "expected": [
+        "Original earn ledger entry remains unchanged.",
+        "New reversal ledger entry references original transaction, card, rule, and trace.",
+        "Accumulated and redeemable miles are recalculated net of reversal."
+      ],
+      "passCriteria": [
+        "Ledger history is append-only.",
+        "Reversed miles metric includes the reversal."
+      ]
+    },
+    {
+      "id": "MCC-001",
+      "area": "merchant-category-mcc",
+      "priority": "high",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify ride-hailing transaction with plausible MCC ambiguity.",
+      "input": {
+        "rawDescription": "GRAB *TRIP SINGAPORE",
+        "country": "SG",
+        "amountMinor": -1840,
+        "candidateExpectation": {
+          "merchantFamily": "Grab",
+          "categoryFamily": ["Transport", "Ride-hailing"],
+          "acceptableMccFamilies": [
+            "4121 Taxicabs and limousines",
+            "4789 Transportation services not elsewhere classified"
+          ],
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Canonical merchant is Grab or Grab ride-hailing.",
+        "Category is transport-related.",
+        "MCC is in a transport family or flagged as uncertain.",
+        "Miles eligibility is provisional until card rule and MCC confidence are resolved."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-002",
+      "area": "merchant-category-mcc",
+      "priority": "high",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify GrabFood transaction separately from ride-hailing.",
+      "input": {
+        "rawDescription": "GRABFOOD SG",
+        "country": "SG",
+        "amountMinor": -2630,
+        "candidateExpectation": {
+          "merchantFamily": "GrabFood",
+          "categoryFamily": ["Dining", "Food delivery"],
+          "acceptableMccFamilies": [
+            "5812 Eating places and restaurants",
+            "5814 Fast food restaurants"
+          ],
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Canonical merchant distinguishes food delivery from transport.",
+        "Category is dining or food delivery.",
+        "Transport MCC is not used unless evidence says this acquirer uses it.",
+        "Confidence reflects MCC ambiguity."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-003",
+      "area": "merchant-category-mcc",
+      "priority": "high",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify NTUC FairPrice supermarket transaction.",
+      "input": {
+        "rawDescription": "NTUC FP AMK HUB SINGAPORE",
+        "country": "SG",
+        "amountMinor": -8735,
+        "candidateExpectation": {
+          "merchantFamily": "NTUC FairPrice",
+          "categoryFamily": ["Groceries", "Household essentials"],
+          "acceptableMccFamilies": ["5411 Grocery stores and supermarkets"],
+          "reviewFlagExpectedWhenExactMccUnverified": false
+        }
+      },
+      "expected": [
+        "Canonical merchant is NTUC FairPrice.",
+        "Category is groceries.",
+        "MCC family is supermarket/grocery.",
+        "Miles eligibility remains dependent on card exclusions and caps."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-004",
+      "area": "merchant-category-mcc",
+      "priority": "high",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify Cold Storage grocery transaction.",
+      "input": {
+        "rawDescription": "COLD STORAGE BUGIS JUNCTION",
+        "country": "SG",
+        "amountMinor": -4520,
+        "candidateExpectation": {
+          "merchantFamily": "Cold Storage",
+          "categoryFamily": ["Groceries"],
+          "acceptableMccFamilies": ["5411 Grocery stores and supermarkets"],
+          "reviewFlagExpectedWhenExactMccUnverified": false
+        }
+      },
+      "expected": [
+        "Canonical merchant is Cold Storage.",
+        "Category is groceries.",
+        "MCC family is grocery/supermarket."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-005",
+      "area": "merchant-category-mcc",
+      "priority": "high",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify Shopee marketplace transaction with ambiguity.",
+      "input": {
+        "rawDescription": "SHOPEE SINGAPORE 240619",
+        "country": "SG",
+        "amountMinor": -5990,
+        "candidateExpectation": {
+          "merchantFamily": "Shopee",
+          "categoryFamily": ["Shopping", "Online marketplace"],
+          "acceptableMccFamilies": [
+            "5399 Miscellaneous general merchandise",
+            "5311 Department stores",
+            "5999 Miscellaneous retail"
+          ],
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Canonical merchant is Shopee.",
+        "Category is shopping or marketplace.",
+        "Exact MCC is not overclaimed.",
+        "Confidence or review state reflects marketplace ambiguity."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-006",
+      "area": "merchant-category-mcc",
+      "priority": "high",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify Lazada marketplace transaction with ambiguity.",
+      "input": {
+        "rawDescription": "LAZADA SG MARKETPLACE",
+        "country": "SG",
+        "amountMinor": -12490,
+        "candidateExpectation": {
+          "merchantFamily": "Lazada",
+          "categoryFamily": ["Shopping", "Online marketplace"],
+          "acceptableMccFamilies": [
+            "5399 Miscellaneous general merchandise",
+            "5311 Department stores",
+            "5999 Miscellaneous retail"
+          ],
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Canonical merchant is Lazada.",
+        "Category is shopping or marketplace.",
+        "MCC classification is plausible and calibrated."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-007",
+      "area": "merchant-category-mcc",
+      "priority": "medium",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify Apple App Store digital purchase.",
+      "input": {
+        "rawDescription": "APPLE.COM/BILL ITUNES.COM",
+        "country": "SG",
+        "amountMinor": -1498,
+        "candidateExpectation": {
+          "merchantFamily": "Apple",
+          "categoryFamily": ["Digital services", "Software", "Subscriptions"],
+          "acceptableMccFamilies": [
+            "5815 Digital goods media",
+            "5816 Digital goods games",
+            "5817 Digital goods applications",
+            "5818 Digital goods"
+          ],
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Canonical merchant is Apple or Apple App Store.",
+        "Category reflects digital goods or subscription.",
+        "MCC is a digital-goods family or marked uncertain."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-008",
+      "area": "merchant-category-mcc",
+      "priority": "medium",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify Netflix subscription.",
+      "input": {
+        "rawDescription": "NETFLIX.COM SINGAPORE",
+        "country": "SG",
+        "amountMinor": -2198,
+        "candidateExpectation": {
+          "merchantFamily": "Netflix",
+          "categoryFamily": ["Streaming", "Entertainment", "Subscription"],
+          "acceptableMccFamilies": [
+            "4899 Cable, satellite, and other pay television and radio services",
+            "5815 Digital goods media",
+            "5818 Digital goods"
+          ],
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Canonical merchant is Netflix.",
+        "Category is entertainment or streaming subscription.",
+        "MCC is plausible and uncertainty is explicit."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-009",
+      "area": "merchant-category-mcc",
+      "priority": "high",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify Shell petrol station transaction.",
+      "input": {
+        "rawDescription": "SHELL SERANGOON SG",
+        "country": "SG",
+        "amountMinor": -8025,
+        "candidateExpectation": {
+          "merchantFamily": "Shell",
+          "categoryFamily": ["Fuel", "Transport"],
+          "acceptableMccFamilies": ["5541 Service stations", "5542 Automated fuel dispensers"],
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Canonical merchant is Shell.",
+        "Category is fuel.",
+        "MCC family is fuel/service station or flagged as exact-MCC uncertain."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-010",
+      "area": "merchant-category-mcc",
+      "priority": "medium",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify Singapore Airlines purchase.",
+      "input": {
+        "rawDescription": "SINGAPORE AIRLINES 61888888",
+        "country": "SG",
+        "amountMinor": -128930,
+        "candidateExpectation": {
+          "merchantFamily": "Singapore Airlines",
+          "categoryFamily": ["Travel", "Airline"],
+          "acceptableMccFamilies": ["3075 Singapore Airlines", "4511 Airlines and air carriers"],
+          "reviewFlagExpectedWhenExactMccUnverified": false
+        }
+      },
+      "expected": [
+        "Canonical merchant is Singapore Airlines.",
+        "Category is travel or airline.",
+        "MCC is airline-specific or general airline family."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-011",
+      "area": "merchant-category-mcc",
+      "priority": "medium",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify McDonald's restaurant transaction.",
+      "input": {
+        "rawDescription": "MCDONALDS NEX SINGAPORE",
+        "country": "SG",
+        "amountMinor": -1290,
+        "candidateExpectation": {
+          "merchantFamily": "McDonald's",
+          "categoryFamily": ["Dining", "Fast food"],
+          "acceptableMccFamilies": ["5814 Fast food restaurants"],
+          "reviewFlagExpectedWhenExactMccUnverified": false
+        }
+      },
+      "expected": [
+        "Canonical merchant is McDonald's.",
+        "Category is dining or fast food.",
+        "MCC family is fast food."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-012",
+      "area": "merchant-category-mcc",
+      "priority": "medium",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify hospital or clinic transaction with medical MCC family.",
+      "input": {
+        "rawDescription": "RAFFLES MEDICAL CLINIC SG",
+        "country": "SG",
+        "amountMinor": -6840,
+        "candidateExpectation": {
+          "merchantFamily": "Raffles Medical",
+          "categoryFamily": ["Healthcare", "Medical"],
+          "acceptableMccFamilies": [
+            "8011 Doctors",
+            "8021 Dentists",
+            "8062 Hospitals and medical services",
+            "8099 Medical services"
+          ],
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Category is healthcare.",
+        "MCC is a medical services family or flagged as uncertain.",
+        "Miles eligibility is not overclaimed without card-rule support."
+      ],
+      "passCriteria": ["LLM judge score is at least 4."]
+    },
+    {
+      "id": "MCC-013",
+      "area": "merchant-category-mcc",
+      "priority": "blocker",
+      "requirementRefs": ["3", "4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify IRAS tax payment as excluded or review-required.",
+      "input": {
+        "rawDescription": "IRAS TAX PAYMENT SINGAPORE",
+        "country": "SG",
+        "amountMinor": -240000,
+        "candidateExpectation": {
+          "merchantFamily": "Inland Revenue Authority of Singapore",
+          "categoryFamily": ["Tax", "Government payment"],
+          "acceptableMccFamilies": ["9311 Tax payments", "9399 Government services"],
+          "defaultMilesEligibility": false,
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Merchant is IRAS or Singapore tax authority.",
+        "Category is tax or government payment.",
+        "Miles eligibility is excluded or clearly requires rule-backed review.",
+        "Confidence does not overstate card rewards eligibility."
+      ],
+      "passCriteria": ["LLM judge score is at least 4 and no critical failure is triggered."]
+    },
+    {
+      "id": "MCC-014",
+      "area": "merchant-category-mcc",
+      "priority": "blocker",
+      "requirementRefs": ["3", "4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify insurance payment as excluded or review-required.",
+      "input": {
+        "rawDescription": "AIA SINGAPORE PREMIUM",
+        "country": "SG",
+        "amountMinor": -32000,
+        "candidateExpectation": {
+          "merchantFamily": "AIA",
+          "categoryFamily": ["Insurance"],
+          "acceptableMccFamilies": ["6300 Insurance sales, underwriting, and premiums"],
+          "defaultMilesEligibility": false,
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Category is insurance.",
+        "MCC family is insurance or flagged uncertain.",
+        "Miles eligibility is excluded unless a verified card rule allows it."
+      ],
+      "passCriteria": ["LLM judge score is at least 4 and no critical failure is triggered."]
+    },
+    {
+      "id": "MCC-015",
+      "area": "merchant-category-mcc",
+      "priority": "blocker",
+      "requirementRefs": ["3", "4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify school fee payment as education and excluded or review-required.",
+      "input": {
+        "rawDescription": "NATIONAL UNIVERSITY OF SINGAPORE FEES",
+        "country": "SG",
+        "amountMinor": -250000,
+        "candidateExpectation": {
+          "merchantFamily": "National University of Singapore",
+          "categoryFamily": ["Education", "Tuition"],
+          "acceptableMccFamilies": [
+            "8220 Colleges, universities, professional schools, and junior colleges",
+            "8299 Schools and educational services"
+          ],
+          "defaultMilesEligibility": false,
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Category is education.",
+        "MCC family is education or flagged uncertain.",
+        "Miles eligibility is not overstated."
+      ],
+      "passCriteria": ["LLM judge score is at least 4 and no critical failure is triggered."]
+    },
+    {
+      "id": "MCC-016",
+      "area": "merchant-category-mcc",
+      "priority": "blocker",
+      "requirementRefs": ["3", "4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify CardUp bill payment as potentially excluded quasi-financial spend.",
+      "input": {
+        "rawDescription": "CARDUP.CO RENT PAYMENT",
+        "country": "SG",
+        "amountMinor": -300000,
+        "candidateExpectation": {
+          "merchantFamily": "CardUp",
+          "categoryFamily": ["Bill payment", "Rent", "Financial intermediary"],
+          "acceptableMccFamilies": [
+            "7399 Business services",
+            "6051 Quasi cash",
+            "6538 Money transfer",
+            "6513 Real estate agents and managers rentals"
+          ],
+          "defaultMilesEligibility": false,
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Merchant is CardUp.",
+        "Category captures bill/rent payment and intermediary nature.",
+        "Miles eligibility is review-required because card exclusions vary.",
+        "No confident reward estimate is produced without verified card-specific rules."
+      ],
+      "passCriteria": ["LLM judge score is at least 4 and no critical failure is triggered."]
+    },
+    {
+      "id": "MCC-017",
+      "area": "merchant-category-mcc",
+      "priority": "blocker",
+      "requirementRefs": ["4.3", "4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify a merchant refund as refund, not purchase.",
+      "input": {
+        "rawDescription": "CR SHOPEE REFUND",
+        "country": "SG",
+        "amountMinor": 5990,
+        "direction": "credit",
+        "candidateExpectation": {
+          "merchantFamily": "Shopee",
+          "categoryFamily": ["Refund", "Shopping"],
+          "transactionKind": "refund",
+          "defaultMilesEligibility": false,
+          "reviewFlagExpectedWhenExactMccUnverified": true
+        }
+      },
+      "expected": [
+        "Transaction kind is refund.",
+        "Merchant family may be Shopee.",
+        "No new miles are earned.",
+        "System attempts or queues refund matching."
+      ],
+      "passCriteria": ["LLM judge score is at least 4 and no critical failure is triggered."]
+    },
+    {
+      "id": "MCC-018",
+      "area": "merchant-category-mcc",
+      "priority": "blocker",
+      "requirementRefs": ["4.5", "7.3"],
+      "grader": {
+        "type": "llm_judge",
+        "rubricRef": "merchant_category_mcc",
+        "passThreshold": 4
+      },
+      "automationLayer": "llm-eval",
+      "scenario": "Classify credit-card bill payment as payment, not expense merchant spend.",
+      "input": {
+        "rawDescription": "DBS CREDIT CARD PAYMENT THANK YOU",
+        "country": "SG",
+        "amountMinor": 150000,
+        "direction": "credit",
+        "candidateExpectation": {
+          "merchantFamily": "DBS",
+          "categoryFamily": ["Card payment", "Transfer"],
+          "transactionKind": "payment",
+          "defaultMilesEligibility": false,
+          "reviewFlagExpectedWhenExactMccUnverified": false
+        }
+      },
+      "expected": [
+        "Transaction kind is payment or adjustment, not merchant purchase.",
+        "Expense snapshot excludes it from spend.",
+        "No MCC-based rewards estimate is produced."
+      ],
+      "passCriteria": ["LLM judge score is at least 4 and no critical failure is triggered."]
+    },
+    {
+      "id": "REWARDS-001",
+      "area": "card-rules",
+      "priority": "blocker",
+      "requirementRefs": ["3", "7.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "data-quality-test",
+      "scenario": "Every card rule stores source URL, source type, verification date, and effective dates.",
+      "input": {
+        "cardRules": "seeded and user-created card rules"
+      },
+      "expected": [
+        "source_url is present.",
+        "source_type identifies bank_terms, milelion_research, user_override, or equivalent.",
+        "verified_at is present.",
+        "effective_from is present and effective_to is supported."
+      ],
+      "passCriteria": [
+        "No active rule can be evaluated without source and effective-date metadata.",
+        "Rules sourced from Milelion are labeled as research, not legal source of truth."
+      ]
+    },
+    {
+      "id": "REWARDS-002",
+      "area": "miles-engine",
+      "priority": "blocker",
+      "requirementRefs": ["4.4", "7.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "domain-test",
+      "scenario": "Accumulated, redeemable, pending, and reversed miles use the handoff definitions.",
+      "input": {
+        "ledgerEntries": [
+          {
+            "ledgerType": "earn",
+            "milesEquivalent": 1200,
+            "status": "posted"
+          },
+          {
+            "ledgerType": "earn",
+            "milesEquivalent": 300,
+            "status": "pending"
+          },
+          {
+            "ledgerType": "reversal",
+            "milesEquivalent": -200,
+            "status": "posted"
+          }
+        ],
+        "transferRule": {
+          "minimumTransferMiles": 1000,
+          "transferBlockMiles": 1000
+        }
+      },
+      "expected": [
+        "Accumulated miles are 1300 net of reversals including pending and posted.",
+        "Pending miles are 300.",
+        "Reversed miles are 200.",
+        "Redeemable miles are 1000 after minimum and block rules."
+      ],
+      "passCriteria": ["All four metrics match exactly and display labels align with definitions."]
+    },
+    {
+      "id": "REWARDS-003",
+      "area": "miles-engine",
+      "priority": "high",
+      "requirementRefs": ["4.4", "7.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "domain-test",
+      "scenario": "Spend-to-next redeemable chunk calculates the minimum eligible spend for a specific card/category.",
+      "input": {
+        "currentPoints": 9500,
+        "transferBlockPoints": 10000,
+        "earnRatePointsPerDollar": 10,
+        "eligibleCategory": "Dining",
+        "card": "example dining card"
+      },
+      "expected": [
+        "Points shortfall is 500.",
+        "Spend to next chunk is SGD 50.00 before caps and exclusions.",
+        "Result is labeled as estimate until confirmed."
+      ],
+      "passCriteria": [
+        "Calculation uses integer minor units and traceable formula steps.",
+        "Excluded or capped categories do not return a false recommendation."
+      ]
+    },
+    {
+      "id": "REWARDS-004",
+      "area": "miles-engine",
+      "priority": "blocker",
+      "requirementRefs": ["4.4", "4.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "domain-test",
+      "scenario": "Miles are not earned on refunded value.",
+      "input": {
+        "purchase": {
+          "amountMinor": -10000,
+          "eligibleForMiles": true
+        },
+        "matchedRefund": {
+          "amountMinor": 10000
+        }
+      },
+      "expected": [
+        "Earn entry is reversed or netted by a reversal entry.",
+        "Net accumulated miles for the refunded value is 0.",
+        "Reversal appears in reversed miles metric and transaction activity."
+      ],
+      "passCriteria": ["No active redeemable or pending miles remain for fully refunded spend."]
+    },
+    {
+      "id": "REWARDS-005",
+      "area": "formula-engine",
+      "priority": "blocker",
+      "requirementRefs": ["7.4", "Implementation Team Review section 5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "domain-test",
+      "scenario": "Reward formula evaluator applies ordering, rounding, caps, eligibility, and trace generation.",
+      "input": {
+        "transaction": {
+          "amountMinor": 12345,
+          "mcc": "5812",
+          "category": "Dining"
+        },
+        "rule": {
+          "baseRateMilesPerDollar": 1.2,
+          "bonusRateMilesPerDollar": 3.8,
+          "capAmountMinor": 10000,
+          "eligibility": "Dining only"
+        }
+      },
+      "expected": [
+        "Eligible amount is capped at 10000 minor units.",
+        "Formula applies deterministic rounding at documented points.",
+        "Calculation trace records eligibility, cap, base, bonus, rounding, and final miles."
+      ],
+      "passCriteria": [
+        "Expected final miles match the rule's documented arithmetic exactly.",
+        "Trace is sufficient to explain the result in UI."
+      ]
+    },
+    {
+      "id": "REWARDS-006",
+      "area": "card-rules",
+      "priority": "high",
+      "requirementRefs": ["4.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "domain-test",
+      "scenario": "Historical estimates are not silently rewritten when card rules change.",
+      "input": {
+        "transactionDate": "2026-06-19",
+        "oldRule": {
+          "effectiveFrom": "2026-01-01",
+          "effectiveTo": "2026-06-30"
+        },
+        "newRule": {
+          "effectiveFrom": "2026-07-01"
+        }
+      },
+      "expected": [
+        "Original ledger entry remains tied to old rule.",
+        "New rule does not alter existing ledger unless user requests historical recalculation.",
+        "Historical recalculation creates adjustment entries or a new recalculation version."
+      ],
+      "passCriteria": ["Audit history proves which rule version produced each ledger entry."]
+    },
+    {
+      "id": "REWARDS-007",
+      "area": "card-recommendations",
+      "priority": "medium",
+      "requirementRefs": ["5.2"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Best-card recommendation shows eligibility caveats and opportunity cost.",
+      "input": {
+        "candidateCards": [
+          {
+            "name": "Card A",
+            "estimatedMiles": 400,
+            "capRemainingMinor": 10000,
+            "confidence": 0.95
+          },
+          {
+            "name": "Card B",
+            "estimatedMiles": 450,
+            "capRemainingMinor": 0,
+            "confidence": 0.6
+          }
+        ]
+      },
+      "expected": [
+        "Recommendation does not choose a capped-out card as best.",
+        "Recommendation labels estimates until statement rewards are confirmed.",
+        "UI shows eligibility caveats and cap usage in expandable trace."
+      ],
+      "passCriteria": ["Recommended card and caveat text match deterministic rule output."]
+    },
+    {
+      "id": "PLANNER-001",
+      "area": "expense-snapshots",
+      "priority": "blocker",
+      "requirementRefs": ["4.3", "4.5", "7.1"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "domain-test",
+      "scenario": "Expense snapshot computes gross spend, refunds, net spend, and annualized expenses from accepted transactions.",
+      "input": {
+        "periodStart": "2026-06-01",
+        "periodEnd": "2026-06-30",
+        "purchasesMinor": [10000, 5000],
+        "matchedRefundsMinor": [2000]
+      },
+      "expected": [
+        "gross_spend is 15000.",
+        "refunds is 2000.",
+        "net_spend is 13000.",
+        "annualized_expenses uses period length and documented annualization policy."
+      ],
+      "passCriteria": ["Snapshot values are integer minor units and match expected arithmetic."]
+    },
+    {
+      "id": "PLANNER-002",
+      "area": "expense-snapshots",
+      "priority": "high",
+      "requirementRefs": ["4.5", "7.1"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Accepted expense snapshot supersedes prior active snapshot without deleting history.",
+      "input": {
+        "snapshots": [
+          {
+            "id": "snap_old",
+            "period": "2026-06",
+            "netSpendMinor": 13000
+          },
+          {
+            "id": "snap_new",
+            "period": "2026-06",
+            "netSpendMinor": 12500
+          }
+        ]
+      },
+      "expected": [
+        "Both snapshots remain queryable.",
+        "Planner uses the newest accepted active snapshot for that period.",
+        "Audit trail identifies superseded snapshot."
+      ],
+      "passCriteria": [
+        "Projection input builder selects the correct snapshot and preserves history."
+      ]
+    },
+    {
+      "id": "PLANNER-003",
+      "area": "fire-projections",
+      "priority": "high",
+      "requirementRefs": ["1", "4.5", "5.1"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "domain-test",
+      "scenario": "FIRE projection uses planner assumptions and accepted expense snapshots, not raw import rows.",
+      "input": {
+        "plannerProfile": {
+          "currentNetWorthMinor": 30000000,
+          "targetFireNumberMinor": 100000000,
+          "safeWithdrawalRateBasisPoints": 400,
+          "expectedReturnRateBasisPoints": 500,
+          "inflationRateBasisPoints": 250
+        },
+        "acceptedSnapshot": {
+          "annualizedExpensesMinor": 4800000
+        },
+        "unacceptedDraftSnapshot": {
+          "annualizedExpensesMinor": 9000000
+        }
+      },
+      "expected": [
+        "Projection input uses accepted snapshot only.",
+        "Draft snapshot does not affect FIRE percentage or FI date.",
+        "Projection result includes FIRE percentage, target corpus progress, FI date estimate, and runway inputs."
+      ],
+      "passCriteria": [
+        "Changing raw transactions without accepting a new snapshot does not silently change planner result."
+      ]
+    },
+    {
+      "id": "UI-MOBILE-001",
+      "area": "mobile-home",
+      "priority": "high",
+      "requirementRefs": ["5.1"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-visual",
+      "scenario": "Mobile home top hierarchy at 390px shows FIRE percentage, corpus progress, FI date, runway, and next action above the fold.",
+      "input": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "state": "profile configured, latest import pending review"
+      },
+      "expected": [
+        "Hero prominently displays FIRE percentage.",
+        "Duplicate FIRE Progress card is absent.",
+        "Corpus progress and runway compact modules are visible.",
+        "Primary CTA is review latest import.",
+        "Secondary actions open Plan, Transactions, and Cards."
+      ],
+      "passCriteria": [
+        "Screenshot and DOM assertions confirm required elements without overlap or clipping."
+      ]
+    },
+    {
+      "id": "UI-MOBILE-002",
+      "area": "mobile-home",
+      "priority": "high",
+      "requirementRefs": ["5.1"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-visual",
+      "scenario": "Mobile home at 430px switches CTA to apply latest expense snapshot when no review is pending.",
+      "input": {
+        "viewport": {
+          "width": 430,
+          "height": 932
+        },
+        "state": "latest accepted import, unapplied expense snapshot"
+      },
+      "expected": [
+        "Primary CTA is apply latest expense snapshot.",
+        "Review queue card shows no blocking review action.",
+        "Financial deltas use text labels in addition to color."
+      ],
+      "passCriteria": ["DOM and screenshot checks match expected CTA and labels."]
+    },
+    {
+      "id": "UI-MOBILE-003",
+      "area": "mobile-home",
+      "priority": "medium",
+      "requirementRefs": ["5.1"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-test",
+      "scenario": "Mobile home empty state shows setup checklist.",
+      "input": {
+        "state": "new profile with no statement import and no card setup",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        }
+      },
+      "expected": [
+        "Empty state includes profile setup, first statement import, and first card setup checklist items.",
+        "No misleading FIRE or miles metrics are shown as confirmed."
+      ],
+      "passCriteria": ["Checklist items are actionable and deep link to the correct setup flows."]
+    },
+    {
+      "id": "UI-MOBILE-004",
+      "area": "mobile-navigation",
+      "priority": "medium",
+      "requirementRefs": ["5.1"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-test",
+      "scenario": "Home cards deep link to tabs and preserve back navigation.",
+      "input": {
+        "actions": [
+          "tap net spend card",
+          "tap system back",
+          "tap miles bank card",
+          "tap system back"
+        ]
+      },
+      "expected": [
+        "Net spend opens Transactions or Expense Snapshot context.",
+        "Miles bank opens Cards/Miles tab.",
+        "Back navigation returns to Mobile Home with scroll position preserved."
+      ],
+      "passCriteria": ["Route and state assertions match expected navigation after each action."]
+    },
+    {
+      "id": "UI-CARDS-001",
+      "area": "cards-miles-tab",
+      "priority": "high",
+      "requirementRefs": ["5.2"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-visual",
+      "scenario": "Cards/Miles tab prioritizes redeemable miles and supporting metrics.",
+      "input": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "state": "active card rules, pending and reversed miles present"
+      },
+      "expected": [
+        "Primary metric is redeemable miles.",
+        "Accumulated, pending, reversed, and expiry risk metrics are visible as supporting metrics.",
+        "Miles vault and spend-to-next chunk are visible.",
+        "View is clearly a tab, not the landing page."
+      ],
+      "passCriteria": ["DOM order and screenshot confirm hierarchy and labels."]
+    },
+    {
+      "id": "UI-CARDS-002",
+      "area": "cards-miles-tab",
+      "priority": "high",
+      "requirementRefs": ["5.2"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-test",
+      "scenario": "Card-level and category-level recommendations include traces and caveats.",
+      "input": {
+        "state": "eligible dining spend recommendation with cap near exhaustion"
+      },
+      "expected": [
+        "Best card now is displayed.",
+        "Category-level recommendation is displayed.",
+        "Eligibility caveat and cap usage are expandable.",
+        "Recommendation is labeled estimate until confirmed."
+      ],
+      "passCriteria": [
+        "Trace opens and contains formula, rule source, cap, MCC confidence, and effective date."
+      ]
+    },
+    {
+      "id": "UI-CARDS-003",
+      "area": "cards-miles-tab",
+      "priority": "medium",
+      "requirementRefs": ["5.2"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-visual",
+      "scenario": "MCC confidence and refund reversals appear inline in transaction activity, not as dashboard cards.",
+      "input": {
+        "state": "transaction activity includes low MCC confidence and refund reversal"
+      },
+      "expected": [
+        "Low MCC confidence is displayed on the affected activity row.",
+        "Refund reversal is displayed on the affected activity row.",
+        "No standalone KPI card exists for MCC confidence or refund matched."
+      ],
+      "passCriteria": ["DOM query finds row badges and finds no top-level diagnostic KPI cards."]
+    },
+    {
+      "id": "UI-DESKTOP-001",
+      "area": "desktop-dashboard",
+      "priority": "high",
+      "requirementRefs": ["5.3"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-visual",
+      "scenario": "Desktop dashboard at 1440px uses left navigation, top KPI row, central review inbox, and right insight column.",
+      "input": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "state": "many review items"
+      },
+      "expected": [
+        "Sidebar width is between 220px and 260px.",
+        "Main center column is at least 640px.",
+        "Right insight column width is between 320px and 380px.",
+        "Top KPI row is visible.",
+        "Review inbox is central operational area.",
+        "Right column includes FI impact, miles overview, and expense snapshot panels."
+      ],
+      "passCriteria": [
+        "Layout measurements fall within required ranges.",
+        "Screenshot shows no overlap or clipped text."
+      ]
+    },
+    {
+      "id": "UI-DESKTOP-002",
+      "area": "desktop-dashboard",
+      "priority": "high",
+      "requirementRefs": ["5.3"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-visual",
+      "scenario": "Dense fallback at 1280px preserves review inbox and collapses only when required by viewport.",
+      "input": {
+        "viewport": {
+          "width": 1280,
+          "height": 800
+        },
+        "state": "many review items"
+      },
+      "expected": [
+        "Sidebar remains usable.",
+        "Center review inbox remains at least 640px.",
+        "Right insight column remains within required width or stacks below only if responsive breakpoint requires it.",
+        "Review inbox header and filters remain sticky in center column."
+      ],
+      "passCriteria": ["Measured layout and scroll behavior match desktop rules."]
+    },
+    {
+      "id": "UI-DESKTOP-003",
+      "area": "desktop-dashboard",
+      "priority": "medium",
+      "requirementRefs": ["5.3"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-visual",
+      "scenario": "Tablet and mobile collapse right-column insights below review inbox.",
+      "input": {
+        "viewport": {
+          "width": 900,
+          "height": 900
+        }
+      },
+      "expected": [
+        "Right insight panels stack below review inbox.",
+        "Review inbox remains before insights in reading order.",
+        "No horizontal scrolling is required."
+      ],
+      "passCriteria": ["Screenshot and computed layout confirm stacked responsive behavior."]
+    },
+    {
+      "id": "UI-REVIEW-001",
+      "area": "review-inbox",
+      "priority": "blocker",
+      "requirementRefs": ["5.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-test",
+      "scenario": "Review row displays all required transaction details and actions.",
+      "input": {
+        "reviewItem": {
+          "merchant": "Grab",
+          "rawDescription": "GRAB *TRIP SINGAPORE",
+          "amountMinor": -1840,
+          "date": "2026-06-20",
+          "account": "DBS **** 1234",
+          "direction": "debit",
+          "category": "Transport",
+          "mcc": "4121",
+          "milesEligibility": "estimated",
+          "refundStatus": "none",
+          "confidence": 0.72,
+          "suggestedCorrection": "Confirm MCC",
+          "impactPreview": "-18.40 transport, estimated 22 miles"
+        }
+      },
+      "expected": [
+        "Row includes merchant and raw description.",
+        "Row includes amount, date, account or card, and direction.",
+        "Row includes category, MCC, miles eligibility, refund status, confidence label, suggested correction, and impact preview.",
+        "Row actions include accept, edit, split, match refund, ignore, or mark reviewed as contextually applicable."
+      ],
+      "passCriteria": ["DOM assertions confirm required fields and actions."]
+    },
+    {
+      "id": "UI-REVIEW-002",
+      "area": "review-inbox",
+      "priority": "high",
+      "requirementRefs": ["5.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-test",
+      "scenario": "Review inbox supports first import, parsing, parser failed, duplicate warning, no items, many items, stale rules, unmatched refund, miles exception, and correction saved states.",
+      "input": {
+        "states": [
+          "first_import",
+          "import_parsing",
+          "parser_failed",
+          "duplicate_import_warning",
+          "no_review_items",
+          "many_review_items",
+          "stale_card_rules",
+          "unmatched_refund",
+          "miles_exception",
+          "correction_saved"
+        ]
+      },
+      "expected": [
+        "Every required state has a distinct user-facing UI.",
+        "Blocking states provide next actions.",
+        "Success state confirms the correction and recalculation impact."
+      ],
+      "passCriteria": ["State fixture renders pass all DOM assertions and screenshot checks."]
+    },
+    {
+      "id": "UI-REVIEW-003",
+      "area": "review-inbox",
+      "priority": "high",
+      "requirementRefs": ["5.4", "4.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Accepting a suggested correction saves audit metadata and triggers recalculation.",
+      "input": {
+        "correction": {
+          "transactionId": "txn_001",
+          "field": "mcc_id",
+          "oldValue": "unknown",
+          "newValue": "5812"
+        }
+      },
+      "expected": [
+        "Transaction metadata updates as user-owned correction.",
+        "Audit event records old value, new value, user action, and timestamp.",
+        "Merchant heuristic is updated or suggested according to policy.",
+        "Rewards recalculation is queued or executed.",
+        "Review row moves to reviewed or lower-priority state."
+      ],
+      "passCriteria": ["Database and UI state both reflect correction and recalculation trigger."]
+    },
+    {
+      "id": "A11Y-001",
+      "area": "accessibility",
+      "priority": "blocker",
+      "requirementRefs": ["5.4 Accessibility requirements"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-accessibility",
+      "scenario": "Review inbox and correction dialogs are keyboard navigable with visible focus states.",
+      "input": {
+        "actions": [
+          "tab through review inbox",
+          "open correction dialog",
+          "edit MCC",
+          "save",
+          "return focus to originating row"
+        ]
+      },
+      "expected": [
+        "All interactive controls are reachable by keyboard.",
+        "Focus order follows visual and semantic order.",
+        "Visible focus state is present on every control.",
+        "Focus returns to the originating row after dialog close."
+      ],
+      "passCriteria": ["Keyboard-only test completes without pointer input."]
+    },
+    {
+      "id": "A11Y-002",
+      "area": "accessibility",
+      "priority": "blocker",
+      "requirementRefs": ["5.4 Accessibility requirements"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "accessibility-scan",
+      "scenario": "Review inbox uses semantic table or list structure and screen-reader labels.",
+      "input": {
+        "screens": [
+          "mobile home",
+          "cards tab",
+          "desktop dashboard",
+          "review inbox",
+          "correction dialog"
+        ]
+      },
+      "expected": [
+        "Review rows expose semantic table rows or list items.",
+        "Financial and miles deltas have screen-reader labels.",
+        "Icon-only actions have accessible names.",
+        "Dialogs have role, label, focus trap, and close behavior."
+      ],
+      "passCriteria": [
+        "Automated accessibility scan has zero critical or serious violations.",
+        "Manual screen-reader spot check confirms financial deltas are understandable."
+      ]
+    },
+    {
+      "id": "A11Y-003",
+      "area": "accessibility",
+      "priority": "high",
+      "requirementRefs": ["5.1", "5.2", "5.4 Accessibility requirements"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "visual-accessibility",
+      "scenario": "Color, touch target, and reduced-motion requirements are met.",
+      "input": {
+        "screens": ["mobile home", "cards tab", "desktop dashboard"],
+        "settings": ["normal motion", "prefers-reduced-motion"]
+      },
+      "expected": [
+        "Touch targets are at least 44px high on mobile.",
+        "Text and state badges meet WCAG AA contrast.",
+        "Financial and miles deltas use labels beyond color.",
+        "Reduced-motion setting disables or simplifies progress and gamified animations."
+      ],
+      "passCriteria": ["Automated measurements and visual assertions pass."]
+    },
+    {
+      "id": "FIGMA-001",
+      "area": "figma-handoff",
+      "priority": "medium",
+      "requirementRefs": ["5.5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "design-review",
+      "scenario": "Figma frames exist for all required screen sizes and states before UI implementation is marked complete.",
+      "input": {
+        "requiredFrames": [
+          "Mobile Home 390px",
+          "Mobile Home 430px",
+          "Mobile Cards 390px",
+          "Mobile Cards 430px",
+          "Desktop Dashboard 1280px",
+          "Desktop Dashboard 1440px",
+          "Review Inbox Correction Dialog",
+          "Empty State",
+          "Loading State",
+          "Error State",
+          "Review Needed State",
+          "Success State"
+        ]
+      },
+      "expected": [
+        "Every required frame exists.",
+        "Frames include component names, variants, tokens, responsive annotations, uncertainty labels, focus order, contrast notes, and accessibility labels."
+      ],
+      "passCriteria": ["Design review checklist passes for all required frames."]
+    },
+    {
+      "id": "SECURITY-001",
+      "area": "privacy-security",
+      "priority": "blocker",
+      "requirementRefs": ["4.1", "4.2", "6.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "security-test",
+      "scenario": "Sensitive local financial data is not leaked through logs, browser storage, exports, or temp files.",
+      "input": {
+        "sensitiveStrings": [
+          "full statement path",
+          "raw account number",
+          "raw transaction description",
+          "full file hash"
+        ]
+      },
+      "expected": [
+        "Logs are redacted.",
+        "Temp files are cleaned after parse.",
+        "Browser local/session storage does not contain raw statements or full transaction payloads unless explicitly designed and encrypted.",
+        "Exports include only user-approved data."
+      ],
+      "passCriteria": [
+        "Automated scans find zero sensitive strings outside intended encrypted storage or explicit export files."
+      ]
+    },
+    {
+      "id": "SECURITY-002",
+      "area": "privacy-security",
+      "priority": "high",
+      "requirementRefs": ["4.1", "4.2"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "security-review",
+      "scenario": "Encrypted storage requirement is enforced before real financial data use.",
+      "input": {
+        "buildMode": "real-data-enabled"
+      },
+      "expected": [
+        "Real-data builds use SQLCipher or platform encrypted storage.",
+        "If encryption is unavailable, the build blocks real-data mode or labels itself demo-only.",
+        "Source statement attachments remain disabled unless encrypted storage and deletion controls exist."
+      ],
+      "passCriteria": [
+        "Configuration and runtime checks prevent silent plaintext real-data storage."
+      ]
+    },
+    {
+      "id": "EXPORT-001",
+      "area": "export-import",
+      "priority": "high",
+      "requirementRefs": ["4.1", "7"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "integration-test",
+      "scenario": "Export and import round trip preserves profiles, transactions, card rules, reward ledger, snapshots, and audit lineage.",
+      "input": {
+        "fixtureDatabase": "profile with imports, merchant corrections, refund matches, reward ledger, and accepted snapshot"
+      },
+      "expected": [
+        "Export succeeds without original source PDFs.",
+        "Import into a clean database preserves IDs or stable references.",
+        "Computed metrics after import match pre-export metrics.",
+        "Audit and source lineage remain intact."
+      ],
+      "passCriteria": ["Pre-export and post-import snapshots are equal for deterministic fields."]
+    },
+    {
+      "id": "PERF-001",
+      "area": "performance",
+      "priority": "medium",
+      "requirementRefs": ["5.3", "5.4", "6.4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "performance-test",
+      "scenario": "Large statement import and review inbox remain responsive.",
+      "input": {
+        "transactionCount": 5000,
+        "reviewItemCount": 1000,
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        }
+      },
+      "expected": [
+        "Import preview builds within documented performance budget.",
+        "Review inbox initial render and filtering remain responsive.",
+        "Sticky header and independent right-column scrolling remain smooth."
+      ],
+      "passCriteria": [
+        "Performance budget is met on the agreed baseline machine.",
+        "No long task or memory growth makes review unusable."
+      ]
+    },
+    {
+      "id": "DB-006",
+      "area": "database-schema",
+      "priority": "blocker",
+      "requirementRefs": ["4.1", "7"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "migration-test",
+      "scenario": "Planner rates are persisted as integer basis points.",
+      "input": {
+        "table": "planner_profiles",
+        "columns": [
+          "safe_withdrawal_rate_basis_points",
+          "expected_return_rate_basis_points",
+          "inflation_rate_basis_points"
+        ]
+      },
+      "expected": [
+        "Planner rate columns use INTEGER storage.",
+        "No planner rate column uses REAL, FLOAT, or DOUBLE storage.",
+        "Application projection code may convert basis points to decimal rates at domain boundaries."
+      ],
+      "passCriteria": [
+        "Schema inspection confirms all persisted planner rate columns are integer basis-point fields."
+      ]
+    },
+    {
+      "id": "DB-007",
+      "area": "database-schema",
+      "priority": "high",
+      "requirementRefs": ["4.1", "7"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "migration-test",
+      "scenario": "Database write boundaries reject invalid enum values.",
+      "input": {
+        "enumFields": [
+          "statement_imports.import_status",
+          "transactions.direction",
+          "transactions.transaction_kind",
+          "refund_matches.status",
+          "reward_ledger.ledger_type",
+          "reward_ledger.status"
+        ]
+      },
+      "expected": [
+        "Invalid enum values fail deterministically at insert or update time.",
+        "Failures do not create partial rows.",
+        "Allowed enum values remain centralized in schema code."
+      ],
+      "passCriteria": [
+        "Automated database tests prove invalid enum inserts fail with constraint errors."
+      ]
+    },
+    {
+      "id": "PARSER-006",
+      "area": "parser-bridge",
+      "priority": "high",
+      "requirementRefs": ["4.2", "8"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "security-test",
+      "scenario": "Parser log sanitizer redacts raw transfer descriptions.",
+      "input": {
+        "stderr": "PAYNOW TRANSFER JOHN TAN 91234567 from /Users/person/statement.pdf"
+      },
+      "expected": [
+        "Person names and phone or account-like values are removed.",
+        "Full source paths are removed.",
+        "The sanitized log keeps only stable diagnostic context and redaction markers."
+      ],
+      "passCriteria": [
+        "Automated parser bridge tests find no raw sensitive transfer description fragments."
+      ]
+    },
+    {
+      "id": "MCC-019",
+      "area": "merchant-category-mcc",
+      "priority": "high",
+      "requirementRefs": ["3.3", "7"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "data-quality-test",
+      "scenario": "Golden MCC fixture suite covers the required Singapore merchant scenarios.",
+      "input": {
+        "requiredScenarioIds": [
+          "MCC-001",
+          "MCC-002",
+          "MCC-003",
+          "MCC-004",
+          "MCC-005",
+          "MCC-006",
+          "MCC-007",
+          "MCC-008",
+          "MCC-009",
+          "MCC-010",
+          "MCC-011",
+          "MCC-012",
+          "MCC-013",
+          "MCC-014",
+          "MCC-015",
+          "MCC-016",
+          "MCC-017",
+          "MCC-018"
+        ]
+      },
+      "expected": [
+        "Each required merchant scenario has a deterministic fixture or a documented non-merchant transaction-kind test.",
+        "Fixtures assert canonical merchant, category, MCC family, and confidence behavior where applicable.",
+        "Refund and credit-card payment scenarios do not create false purchase reward estimates."
+      ],
+      "passCriteria": [
+        "Automated merchant, ingestion, refund, and transaction-kind tests cover all listed scenario IDs."
+      ]
+    },
+    {
+      "id": "EVAL-001",
+      "area": "release-gate",
+      "priority": "high",
+      "requirementRefs": ["Implementation Team Review section 8"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "manifest-test",
+      "scenario": "Eval manifest is structurally valid and reports executable versus external gates.",
+      "input": {
+        "manifest": "docs/evals.json",
+        "command": "npm run evals"
+      },
+      "expected": [
+        "Eval IDs are unique.",
+        "Required fields are present for every eval.",
+        "Automation layers are classified as executable or external/manual gates."
+      ],
+      "passCriteria": [
+        "Eval manifest tests and npm run evals complete successfully."
+      ]
+    },
+    {
+      "id": "RELEASE-001",
+      "area": "release-gate",
+      "priority": "blocker",
+      "requirementRefs": ["Implementation Team Review section 8"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "ci-gate",
+      "scenario": "Release gate requires clean typecheck, lint, unit tests, integration tests, e2e tests, parser fixtures, reward formula tests, export/import, security scans, accessibility checks, and UAT evidence.",
+      "input": {
+        "commands": [
+          "npm run typecheck",
+          "npm run lint",
+          "npm run test",
+          "npm run test:e2e",
+          "parser fixture suite",
+          "reward formula fixture suite",
+          "export/import round-trip suite",
+          "security scan",
+          "accessibility scan"
+        ]
+      },
+      "expected": [
+        "All automated checks pass.",
+        "No blocker or critical defects remain open.",
+        "Known gaps and residual risks are documented.",
+        "UAT evidence covers mobile home, cards tab, desktop dashboard, review inbox, import, refunds, and miles calculations."
+      ],
+      "passCriteria": [
+        "Release cannot be marked ready unless every gate is green or formally waived with owner, reason, and expiry."
+      ]
+    }
+  ]
+}

@@ -53,6 +53,18 @@ export const mccCategorySeeds: MccCategorySeed[] = [
     isDiscretionary: true,
   },
   {
+    id: "category_digital_services",
+    name: "Digital Services",
+    fireExpenseGroup: "lifestyle",
+    isDiscretionary: true,
+  },
+  {
+    id: "category_travel",
+    name: "Travel",
+    fireExpenseGroup: "lifestyle",
+    isDiscretionary: true,
+  },
+  {
     id: "category_utilities",
     name: "Utilities",
     fireExpenseGroup: "living",
@@ -73,6 +85,12 @@ export const mccCategorySeeds: MccCategorySeed[] = [
   {
     id: "category_healthcare",
     name: "Healthcare",
+    fireExpenseGroup: "living",
+    isDiscretionary: false,
+  },
+  {
+    id: "category_education",
+    name: "Education",
     fireExpenseGroup: "living",
     isDiscretionary: false,
   },
@@ -99,6 +117,22 @@ export const mccSeeds: MccSeed[] = [
     title: "Eating Places And Restaurants",
     networkDescription: "Restaurants, cafes, and eating places.",
     defaultCategoryId: "category_dining",
+    defaultMilesEligibility: true,
+  },
+  {
+    id: "mcc_5814",
+    code: "5814",
+    title: "Fast Food Restaurants",
+    networkDescription: "Fast food restaurants and quick-service food merchants.",
+    defaultCategoryId: "category_dining",
+    defaultMilesEligibility: true,
+  },
+  {
+    id: "mcc_5815",
+    code: "5815",
+    title: "Digital Goods Media",
+    networkDescription: "Digital media, applications, games, and related digital goods.",
+    defaultCategoryId: "category_digital_services",
     defaultMilesEligibility: true,
   },
   {
@@ -134,6 +168,14 @@ export const mccSeeds: MccSeed[] = [
     defaultMilesEligibility: true,
   },
   {
+    id: "mcc_4511",
+    code: "4511",
+    title: "Airlines And Air Carriers",
+    networkDescription: "Airline ticket purchases and air carrier services.",
+    defaultCategoryId: "category_travel",
+    defaultMilesEligibility: true,
+  },
+  {
     id: "mcc_4814",
     code: "4814",
     title: "Telecommunication Services",
@@ -164,6 +206,14 @@ export const mccSeeds: MccSeed[] = [
     networkDescription: "Hospital services.",
     defaultCategoryId: "category_healthcare",
     defaultMilesEligibility: true,
+  },
+  {
+    id: "mcc_8211",
+    code: "8211",
+    title: "Schools",
+    networkDescription: "Elementary, secondary, and educational institutions.",
+    defaultCategoryId: "category_education",
+    defaultMilesEligibility: false,
   },
   {
     id: "mcc_9399",

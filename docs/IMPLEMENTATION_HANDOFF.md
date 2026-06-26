@@ -439,9 +439,9 @@ Create migrations for these tables first. Field names can be adjusted to match p
   - `current_net_worth`
   - `target_fire_number`
   - `annual_expenses`
-  - `safe_withdrawal_rate`
-  - `expected_return_rate`
-  - `inflation_rate`
+  - `safe_withdrawal_rate_basis_points`
+  - `expected_return_rate_basis_points`
+  - `inflation_rate_basis_points`
   - `cpf_settings_json`
   - `scenario_settings_json`
 
