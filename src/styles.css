@@ -350,6 +350,73 @@ h2 {
   white-space: nowrap;
 }
 
+.leakage-card {
+  display: grid;
+  gap: var(--space-lg);
+  border: 1px solid rgba(242, 201, 76, 0.22);
+  border-radius: var(--radius-md);
+  background: rgba(242, 201, 76, 0.07);
+  padding: var(--space-lg);
+}
+
+.leakage-card h3 {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--font-body-large);
+}
+
+.leakage-card p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-caption);
+}
+
+.leakage-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm);
+  margin: 0;
+}
+
+.leakage-card dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-caption);
+}
+
+.leakage-card dd {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-gold);
+  font-weight: 800;
+}
+
+.leakage-card ul {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.leakage-card li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-xs) var(--space-md);
+  border-top: 1px solid rgba(242, 201, 76, 0.14);
+  padding-top: var(--space-sm);
+}
+
+.leakage-card li span,
+.leakage-card li p {
+  min-width: 0;
+}
+
+.leakage-card li strong {
+  color: var(--color-gold);
+}
+
+.leakage-card li p {
+  grid-column: 1 / -1;
+}
+
 .bottom-tabs {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

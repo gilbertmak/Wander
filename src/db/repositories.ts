@@ -4,6 +4,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import type { DatabaseConnection } from "./client";
 import {
   accounts,
+  cardPeriodSummaries,
   decisionTraces,
   expenseSnapshots,
   plannerProfiles,
@@ -14,6 +15,7 @@ import {
   statementImports,
   transactionTrustScores,
   transactions,
+  milesLeakageItems,
 } from "./schema";
 
 export type Profile = InferSelectModel<typeof profiles>;
@@ -24,9 +26,11 @@ export type NewDecisionTrace = InferInsertModel<typeof decisionTraces>;
 export type NewStatementImport = InferInsertModel<typeof statementImports>;
 export type NewStatementReconciliation = InferInsertModel<typeof statementReconciliations>;
 export type NewAccount = InferInsertModel<typeof accounts>;
+export type NewCardPeriodSummary = InferInsertModel<typeof cardPeriodSummaries>;
 export type NewTransaction = InferInsertModel<typeof transactions>;
 export type NewTransactionTrustScore = InferInsertModel<typeof transactionTrustScores>;
 export type NewRefundTimeline = InferInsertModel<typeof refundTimelines>;
+export type NewMilesLeakageItem = InferInsertModel<typeof milesLeakageItems>;
 export type NewRewardLedgerEntry = InferInsertModel<typeof rewardLedger>;
 
 export function createRepositories(connection: DatabaseConnection) {
@@ -38,10 +42,40 @@ export function createRepositories(connection: DatabaseConnection) {
     statementImports: createStatementImportRepository(connection),
     statementReconciliations: createStatementReconciliationRepository(connection),
     accounts: createAccountRepository(connection),
+    cardPeriodSummaries: createCardPeriodSummaryRepository(connection),
     transactions: createTransactionRepository(connection),
     transactionTrustScores: createTransactionTrustScoreRepository(connection),
     refundTimelines: createRefundTimelineRepository(connection),
+    milesLeakageItems: createMilesLeakageItemRepository(connection),
     rewardLedger: createRewardLedgerRepository(connection),
+  };
+}
+
+function createCardPeriodSummaryRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewCardPeriodSummary) =>
+      connection.db.insert(cardPeriodSummaries).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(cardPeriodSummaries)
+        .where(eq(cardPeriodSummaries.profileId, profileId))
+        .orderBy(desc(cardPeriodSummaries.periodEnd))
+        .all(),
+  };
+}
+
+function createMilesLeakageItemRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewMilesLeakageItem) =>
+      connection.db.insert(milesLeakageItems).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(milesLeakageItems)
+        .where(eq(milesLeakageItems.profileId, profileId))
+        .orderBy(desc(milesLeakageItems.createdAt))
+        .all(),
   };
 }
 

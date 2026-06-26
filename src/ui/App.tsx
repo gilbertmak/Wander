@@ -25,6 +25,12 @@ const cardMetrics = [
   { label: "Reversed", value: "-1,200 mi", tone: "reversal" },
 ];
 
+const leakageReasons = [
+  { label: "Missing card assignment", value: "420 mi", action: "Review 3 transactions" },
+  { label: "Cap exhausted", value: "260 mi", action: "Switch card next month" },
+  { label: "Low-confidence MCC", value: "180 mi", action: "Confirm MCC" },
+];
+
 const reviewGroups = [
   {
     label: "Confirm merchant",
@@ -527,6 +533,8 @@ function CardsPanel() {
         ))}
       </div>
 
+      <MilesLeakageCard />
+
       <section className="card-stack" aria-label="Card recommendations">
         <article>
           <div>
@@ -543,6 +551,41 @@ function CardsPanel() {
           <strong>4 mpd</strong>
         </article>
       </section>
+    </section>
+  );
+}
+
+function MilesLeakageCard() {
+  return (
+    <section className="leakage-card" aria-label="Miles leakage monitor">
+      <div>
+        <p className="eyebrow">Leakage monitor</p>
+        <h3>860 missed miles this month</h3>
+        <p>Recoverable actions exclude refunded spend and confirmed excluded MCCs.</p>
+      </div>
+      <dl>
+        <div>
+          <dt>Cap used</dt>
+          <dd>74%</dd>
+        </div>
+        <div>
+          <dt>Excluded spend</dt>
+          <dd>S$312</dd>
+        </div>
+        <div>
+          <dt>Recoverable</dt>
+          <dd>600 mi</dd>
+        </div>
+      </dl>
+      <ul>
+        {leakageReasons.map((reason) => (
+          <li key={reason.label}>
+            <span>{reason.label}</span>
+            <strong>{reason.value}</strong>
+            <p>{reason.action}</p>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

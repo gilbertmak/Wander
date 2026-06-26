@@ -24,6 +24,14 @@ export const refundTimelineStatusValues = [
   "unmatched",
   "rejected",
 ] as const;
+export const milesLeakageReasonValues = [
+  "wrong_card",
+  "cap_exhausted",
+  "excluded_mcc",
+  "refund_reversal",
+  "low_confidence_mcc",
+  "missing_card_assignment",
+] as const;
 
 const now = sql`CURRENT_TIMESTAMP`;
 
@@ -451,6 +459,70 @@ export const refundTimelines = sqliteTable(
   ],
 );
 
+export const cardPeriodSummaries = sqliteTable(
+  "card_period_summaries",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    cardId: text("card_id")
+      .notNull()
+      .references(() => cards.id, { onDelete: "cascade" }),
+    periodStart: text("period_start").notNull(),
+    periodEnd: text("period_end").notNull(),
+    eligibleSpendMinor: integer("eligible_spend_minor").notNull(),
+    excludedSpendMinor: integer("excluded_spend_minor").notNull(),
+    capUsedMinor: integer("cap_used_minor").notNull(),
+    milesEarned: integer("miles_earned").notNull(),
+    milesMissed: integer("miles_missed").notNull(),
+    confidenceScore: real("confidence_score").notNull(),
+    calculatedAt: text("calculated_at").notNull(),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("card_period_summaries_card_period_unique").on(
+      table.cardId,
+      table.periodStart,
+      table.periodEnd,
+    ),
+    index("card_period_summaries_profile_period_idx").on(
+      table.profileId,
+      table.periodStart,
+      table.periodEnd,
+    ),
+  ],
+);
+
+export const milesLeakageItems = sqliteTable(
+  "miles_leakage_items",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    transactionId: text("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    cardId: text("card_id").references(() => cards.id, { onDelete: "set null" }),
+    periodSummaryId: text("period_summary_id").references(() => cardPeriodSummaries.id, {
+      onDelete: "set null",
+    }),
+    reason: text("reason").notNull(),
+    spendMinor: integer("spend_minor").notNull(),
+    milesMissed: integer("miles_missed").notNull(),
+    recoverable: integer("recoverable", { mode: "boolean" }).notNull().default(false),
+    confidenceScore: real("confidence_score").notNull(),
+    traceId: text("trace_id").references(() => decisionTraces.id, { onDelete: "set null" }),
+    createdAt: text("created_at").notNull().default(now),
+  },
+  (table) => [
+    index("miles_leakage_items_profile_reason_idx").on(table.profileId, table.reason),
+    index("miles_leakage_items_transaction_idx").on(table.transactionId),
+  ],
+);
+
 export const rewardLedger = sqliteTable(
   "reward_ledger",
   {
@@ -520,4 +592,6 @@ export const profileRelations = relations(profiles, ({ many, one }) => ({
   transactionTrustScores: many(transactionTrustScores),
   decisionTraces: many(decisionTraces),
   refundTimelines: many(refundTimelines),
+  cardPeriodSummaries: many(cardPeriodSummaries),
+  milesLeakageItems: many(milesLeakageItems),
 }));
