@@ -775,6 +775,103 @@ h2 {
   padding: 0 var(--space-lg);
 }
 
+.correction-panel {
+  display: grid;
+  grid-template-columns: 160px minmax(180px, 1fr) auto auto;
+  gap: var(--space-md);
+  align-items: end;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: var(--radius-md);
+  background: rgba(56, 189, 248, 0.07);
+  padding: var(--space-lg);
+}
+
+.correction-panel div,
+.checkbox-field {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.correction-panel label,
+.checkbox-field {
+  color: var(--color-text-muted);
+  font-size: var(--font-caption);
+  font-weight: 700;
+}
+
+.correction-panel select,
+.correction-panel input {
+  min-height: 44px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-base);
+  color: var(--color-text-primary);
+  padding: 0 var(--space-md);
+}
+
+.checkbox-field {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  min-height: 44px;
+}
+
+.checkbox-field input {
+  width: 18px;
+  min-height: 18px;
+}
+
+.correction-panel button {
+  min-height: 44px;
+  border: 1px solid rgba(242, 201, 76, 0.28);
+  border-radius: var(--radius-md);
+  background: rgba(242, 201, 76, 0.12);
+  color: var(--color-gold);
+  padding: 0 var(--space-lg);
+  cursor: pointer;
+}
+
+.correction-panel p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
+}
+
+.impact-preview {
+  display: grid;
+  gap: var(--space-md);
+  border: 1px solid rgba(242, 201, 76, 0.22);
+  border-radius: var(--radius-md);
+  background: rgba(242, 201, 76, 0.07);
+  padding: var(--space-lg);
+}
+
+.impact-preview h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-body);
+}
+
+.impact-preview dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-md);
+  margin: 0;
+}
+
+.impact-preview div {
+  min-width: 0;
+}
+
+.impact-preview dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-caption);
+}
+
+.impact-preview dd {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-gold);
+  font-weight: 800;
 .kpi-row {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -976,5 +1073,15 @@ h2 {
     gap: var(--space-lg);
     width: min(1440px, 100%);
     margin: 0 auto;
+  }
+}
+
+@media (max-width: 1180px) {
+  .correction-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .impact-preview dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

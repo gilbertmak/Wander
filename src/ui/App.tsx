@@ -1,3 +1,12 @@
+import { useState } from "react";
+
+import {
+  applyCorrectionDraft,
+  type CorrectionField,
+} from "../review/correctionWorkflow";
+import { calculateImpactPreview, type ImpactPreview } from "../review/impactPreview";
+import type { ReviewTransaction } from "../review/reviewInboxModel";
+import { useAppShellStore, type AppTab } from "../state/appShellStore";
 import { useAppShellStore, type MobileTab } from "../state/appShellStore";
 
 const mobileTabs: Array<{ id: MobileTab; label: string; badge?: string }> = [
@@ -19,6 +28,49 @@ const cardMetrics = [
   { label: "Pending", value: "7,240 mi", tone: "warning" },
   { label: "Reversed", value: "-1,200 mi", tone: "reversal" },
 ];
+
+const correctionFields: Array<{ value: CorrectionField; label: string }> = [
+  { value: "category", label: "Category" },
+  { value: "merchant", label: "Merchant" },
+  { value: "mcc", label: "MCC" },
+  { value: "card", label: "Card" },
+  { value: "refund_match", label: "Refund match" },
+  { value: "miles_eligibility", label: "Miles eligibility" },
+];
+
+const sampleReviewTransaction: ReviewTransaction = {
+  id: "transaction_sp_services",
+  postedDate: "2026-06-20",
+  descriptionNormalized: "sp services utilities",
+  amountMinor: -9400,
+  categoryId: null,
+  mccCode: "4900",
+  merchantId: "merchant_sp_services",
+  cardId: "card_citi_rewards",
+  confidenceScore: 0.61,
+  eligibleForMiles: true,
+  needsReview: true,
+  transactionKind: "purchase",
+};
+
+const sampleImpactPreview = calculateImpactPreview({
+  projectionInput: {
+    currentAge: 35,
+    targetRetirementAge: 45,
+    currentNetWorthMinor: 80_000_000,
+    annualExpensesMinor: 4_800_000,
+    annualSavingsMinor: 3_000_000,
+    safeWithdrawalRate: 0.035,
+    expectedReturnRate: 0.05,
+    inflationRate: 0.02,
+    maxYears: 30,
+  },
+  currentMonthlyNetSpendMinor: 400_000,
+  nextMonthlyNetSpendMinor: 450_000,
+  currentMiles: 10_000,
+  nextMiles: 9_200,
+  recalculationTriggers: ["refund_match_changed", "miles_eligibility_changed"],
+});
 
 export function App() {
   { label: "Net Worth", value: "$742k", detail: "+$4.8k this month" },
@@ -180,6 +232,8 @@ function DesktopShell({
             </div>
             <button type="button">Review all</button>
           </div>
+          <CorrectionPanel />
+          <ImpactPreviewPanel preview={sampleImpactPreview} />
           <ReviewRow
             title="SP Services Utilities"
             meta="MCC 4900 · Utilities · no miles"
@@ -239,6 +293,99 @@ function DesktopShell({
         </section>
       </aside>
     </section>
+  );
+}
+
+function ImpactPreviewPanel({ preview }: { preview: ImpactPreview }) {
+  return (
+    <section className="impact-preview" aria-labelledby="impact-preview-title">
+      <div>
+        <p className="eyebrow">Impact preview</p>
+        <h3 id="impact-preview-title">{preview.summary}</h3>
+      </div>
+      <dl>
+        <div>
+          <dt>Monthly net spend</dt>
+          <dd>{formatSignedMoney(preview.monthlyNetSpendDeltaMinor)}</dd>
+        </div>
+        <div>
+          <dt>Annual expenses</dt>
+          <dd>{formatSignedMoney(preview.annualizedExpensesDeltaMinor)}</dd>
+        </div>
+        <div>
+          <dt>FI age</dt>
+          <dd>{preview.fiAgeDelta === undefined ? "n/a" : `${preview.fiAgeDelta > 0 ? "+" : ""}${preview.fiAgeDelta}`}</dd>
+        </div>
+        <div>
+          <dt>Miles</dt>
+          <dd>{preview.milesDelta > 0 ? `+${preview.milesDelta}` : preview.milesDelta}</dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+function CorrectionPanel() {
+  const [field, setField] = useState<CorrectionField>("category");
+  const [nextValue, setNextValue] = useState("category_utilities");
+  const [createHeuristic, setCreateHeuristic] = useState(true);
+  const [message, setMessage] = useState("No correction saved yet.");
+
+  return (
+    <form
+      className="correction-panel"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const result = applyCorrectionDraft(sampleReviewTransaction, {
+          transactionId: sampleReviewTransaction.id,
+          field,
+          nextValue: field === "miles_eligibility" ? nextValue === "true" : nextValue,
+          createHeuristic,
+          correctedAt: "2026-06-26T00:00:00.000Z",
+        });
+
+        setMessage(
+          `Saved ${result.correction.field} correction; triggers ${result.recalculationTriggers.join(", ")}.`,
+        );
+      }}
+    >
+      <div>
+        <label htmlFor="correction-field">Correction</label>
+        <select
+          id="correction-field"
+          onChange={(event) => {
+            const selectedField = event.target.value as CorrectionField;
+            setField(selectedField);
+            setNextValue(selectedField === "miles_eligibility" ? "false" : defaultCorrectionValue(selectedField));
+          }}
+          value={field}
+        >
+          {correctionFields.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label htmlFor="correction-value">New value</label>
+        <input
+          id="correction-value"
+          onChange={(event) => setNextValue(event.target.value)}
+          value={nextValue}
+        />
+      </div>
+      <label className="checkbox-field">
+        <input
+          checked={createHeuristic}
+          onChange={(event) => setCreateHeuristic(event.target.checked)}
+          type="checkbox"
+        />
+        Create heuristic
+      </label>
+      <button type="submit">Save correction</button>
+      <p aria-live="polite">{message}</p>
+    </form>
   );
 }
 
@@ -388,6 +535,30 @@ function ReviewRow({
       <strong>{impact}</strong>
     </article>
   );
+}
+
+function defaultCorrectionValue(field: CorrectionField) {
+  switch (field) {
+    case "category":
+      return "category_utilities";
+    case "merchant":
+      return "merchant_sp_services";
+    case "mcc":
+      return "4900";
+    case "card":
+      return "card_citi_rewards";
+    case "refund_match":
+      return "transaction_purchase";
+    case "miles_eligibility":
+      return "false";
+  }
+}
+
+function formatSignedMoney(valueMinor: number) {
+  const sign = valueMinor > 0 ? "+" : "-";
+  return `${sign}S$${Math.abs(valueMinor / 100).toLocaleString("en-SG", {
+    maximumFractionDigits: 0,
+  })}`;
 }
       <button className="primary-action" type="button">
         Review 7 imported rows

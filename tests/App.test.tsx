@@ -78,6 +78,20 @@ describe("Epic 2 app shell", () => {
     expect(screen.getByRole("heading", { name: /3 items need confirmation/i })).toBeInTheDocument();
     expect(screen.getByLabelText("Insights")).toBeInTheDocument();
     expect(screen.getByText(/Matched merchant text/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /annual expenses \+S\$6,000/i })).toBeInTheDocument();
+    expect(screen.getByText("Monthly net spend")).toBeInTheDocument();
+  });
+
+  it("saves a desktop correction and reports recalculation triggers", async () => {
+    render(<App />);
+
+    await userEvent.selectOptions(screen.getByLabelText("Correction"), "mcc");
+    await userEvent.clear(screen.getByLabelText("New value"));
+    await userEvent.type(screen.getByLabelText("New value"), "4900");
+    await userEvent.click(screen.getByRole("button", { name: "Save correction" }));
+
+    expect(screen.getByText(/Saved mcc correction/i)).toBeInTheDocument();
+    expect(screen.getByText(/mcc_corrected, miles_eligibility_changed/i)).toBeInTheDocument();
     const desktopNav = screen.getByLabelText("Workspace sections");
     await userEvent.click(within(desktopNav).getByRole("button", { name: "Desktop Dashboard" }));
 

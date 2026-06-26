@@ -22,7 +22,14 @@ test("renders the FP-2 desktop dashboard without duplicate diagnostic cards", as
   await expect(page.getByRole("heading", { name: /FI at 45/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /3 items need confirmation/i })).toBeVisible();
   await expect(page.getByText(/Matched merchant text/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /annual expenses \+S\$6,000/i })).toBeVisible();
   await expect(page.getByLabel("Insights")).toBeVisible();
+
+  await page.getByLabel("Correction").selectOption("mcc");
+  await page.getByLabel("New value").fill("4900");
+  await page.getByRole("button", { name: "Save correction" }).click();
+
+  await expect(page.getByText(/Saved mcc correction/i)).toBeVisible();
 test("renders the Epic 2 mobile shell and Cards tab", async ({ page }) => {
   await page.goto("/");
 
