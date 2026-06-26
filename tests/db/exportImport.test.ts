@@ -29,13 +29,22 @@ describe("local data export and import", () => {
     expect(artifact.formatVersion).toBe(exportFormatVersion);
     expect(artifact.app).toEqual({ name: "Wander", exportSource: "local-sqlite" });
     expect(artifact.database.sourceFilesIncluded).toBe(false);
-    expect(artifact.database.migrationIds).toEqual(["0001", "0002", "0003", "0004", "0005"]);
+    expect(artifact.database.migrationIds).toEqual([
+      "0001",
+      "0002",
+      "0003",
+      "0004",
+      "0005",
+      "0006",
+    ]);
     expect(artifact.data.profiles).toHaveLength(1);
     expect(artifact.data.decision_traces).toHaveLength(1);
     expect(artifact.data.statement_imports).toHaveLength(1);
     expect(artifact.data.statement_reconciliations).toHaveLength(1);
     expect(artifact.data.transaction_trust_scores).toHaveLength(1);
     expect(artifact.data.refund_timelines).toHaveLength(1);
+    expect(artifact.data.card_period_summaries).toHaveLength(1);
+    expect(artifact.data.miles_leakage_items).toHaveLength(1);
     expect(artifact.data.seeded_data_versions).toHaveLength(1);
 
     const serialized = JSON.stringify(artifact);
@@ -52,7 +61,7 @@ describe("local data export and import", () => {
       const result = importLocalData(target, artifact);
       const repositories = createRepositories(target);
 
-      expect(result.importedTables).toBe(20);
+      expect(result.importedTables).toBe(22);
       expect(repositories.profiles.getById("profile_1")?.name).toBe("Primary");
       expect(
         repositories.statementImports.getByProfileAndHash("profile_1", "hash_1")?.bankName,
@@ -69,6 +78,8 @@ describe("local data export and import", () => {
       expect(
         repositories.refundTimelines.getByOriginalTransactionId("transaction_profile_1")?.status,
       ).toBe("none");
+      expect(repositories.cardPeriodSummaries.listForProfile("profile_1")).toHaveLength(1);
+      expect(repositories.milesLeakageItems.listForProfile("profile_1")).toHaveLength(1);
       expect(repositories.decisionTraces.listForSourceRecord("transaction_profile_1")).toHaveLength(
         1,
       );
@@ -179,6 +190,12 @@ function seedSourceDatabase(
     maskedIdentifier: "**** 1234",
     currency: "SGD",
   });
+  connection.sqlite
+    .prepare(
+      `INSERT INTO cards (id, issuer, card_name, network, currency, is_active)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .run(`card_${profileId}`, "DBS", "DBS Visa", "Visa", "SGD", 1);
   repositories.expenseSnapshots.create({
     id: `snapshot_${profileId}`,
     profileId,
@@ -261,6 +278,32 @@ function seedSourceDatabase(
     eventJson: "[]",
     caveatJson: "[]",
     calculatedAt: "2026-06-26T00:00:00.000Z",
+  });
+  repositories.cardPeriodSummaries.create({
+    id: `card_period_${profileId}`,
+    profileId,
+    cardId: `card_${profileId}`,
+    periodStart: "2026-06-01",
+    periodEnd: "2026-06-30",
+    eligibleSpendMinor: 1_840,
+    excludedSpendMinor: 0,
+    capUsedMinor: 1_840,
+    milesEarned: 7,
+    milesMissed: 20,
+    confidenceScore: 0.9,
+    calculatedAt: "2026-06-26T00:00:00.000Z",
+  });
+  repositories.milesLeakageItems.create({
+    id: `leakage_${profileId}`,
+    profileId,
+    transactionId: `transaction_${profileId}`,
+    cardId: `card_${profileId}`,
+    periodSummaryId: `card_period_${profileId}`,
+    reason: "wrong_card",
+    spendMinor: 1_840,
+    milesMissed: 20,
+    recoverable: true,
+    confidenceScore: 0.9,
   });
   repositories.rewardLedger.create({
     id: `ledger_${profileId}`,

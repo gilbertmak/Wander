@@ -20,6 +20,7 @@ test("renders the FP-2 mobile shell and bottom tabs", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Miles runway" })).toBeVisible();
   await expect(page.getByLabel("Miles summary").getByText("48,000 mi")).toBeVisible();
+  await expect(page.getByLabel("Miles leakage monitor")).toBeVisible();
 });
 
 test("renders the FP-2 desktop dashboard without duplicate diagnostic cards", async ({ page }) => {
