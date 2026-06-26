@@ -37,4 +37,16 @@ describe("App shell", () => {
     expect(screen.getByLabelText("Insights")).toBeInTheDocument();
     expect(screen.getByText(/Matched merchant text/i)).toBeInTheDocument();
   });
+
+  it("saves a desktop correction and reports recalculation triggers", async () => {
+    render(<App />);
+
+    await userEvent.selectOptions(screen.getByLabelText("Correction"), "mcc");
+    await userEvent.clear(screen.getByLabelText("New value"));
+    await userEvent.type(screen.getByLabelText("New value"), "4900");
+    await userEvent.click(screen.getByRole("button", { name: "Save correction" }));
+
+    expect(screen.getByText(/Saved mcc correction/i)).toBeInTheDocument();
+    expect(screen.getByText(/mcc_corrected, miles_eligibility_changed/i)).toBeInTheDocument();
+  });
 });

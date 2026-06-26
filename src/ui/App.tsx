@@ -1,3 +1,10 @@
+import { useState } from "react";
+
+import {
+  applyCorrectionDraft,
+  type CorrectionField,
+} from "../review/correctionWorkflow";
+import type { ReviewTransaction } from "../review/reviewInboxModel";
 import { useAppShellStore, type AppTab } from "../state/appShellStore";
 
 const tabs: Array<{ id: AppTab; label: string }> = [
@@ -19,6 +26,30 @@ const cardMetrics = [
   { label: "Pending", value: "7,240 mi", tone: "warning" },
   { label: "Reversed", value: "-1,200 mi", tone: "reversal" },
 ];
+
+const correctionFields: Array<{ value: CorrectionField; label: string }> = [
+  { value: "category", label: "Category" },
+  { value: "merchant", label: "Merchant" },
+  { value: "mcc", label: "MCC" },
+  { value: "card", label: "Card" },
+  { value: "refund_match", label: "Refund match" },
+  { value: "miles_eligibility", label: "Miles eligibility" },
+];
+
+const sampleReviewTransaction: ReviewTransaction = {
+  id: "transaction_sp_services",
+  postedDate: "2026-06-20",
+  descriptionNormalized: "sp services utilities",
+  amountMinor: -9400,
+  categoryId: null,
+  mccCode: "4900",
+  merchantId: "merchant_sp_services",
+  cardId: "card_citi_rewards",
+  confidenceScore: 0.61,
+  eligibleForMiles: true,
+  needsReview: true,
+  transactionKind: "purchase",
+};
 
 export function App() {
   const activeTab = useAppShellStore((state) => state.activeTab);
@@ -120,6 +151,7 @@ function DesktopShell({
             </div>
             <button type="button">Review all</button>
           </div>
+          <CorrectionPanel />
           <ReviewRow
             title="SP Services Utilities"
             meta="MCC 4900 · Utilities · no miles"
@@ -179,6 +211,70 @@ function DesktopShell({
         </section>
       </aside>
     </section>
+  );
+}
+
+function CorrectionPanel() {
+  const [field, setField] = useState<CorrectionField>("category");
+  const [nextValue, setNextValue] = useState("category_utilities");
+  const [createHeuristic, setCreateHeuristic] = useState(true);
+  const [message, setMessage] = useState("No correction saved yet.");
+
+  return (
+    <form
+      className="correction-panel"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const result = applyCorrectionDraft(sampleReviewTransaction, {
+          transactionId: sampleReviewTransaction.id,
+          field,
+          nextValue: field === "miles_eligibility" ? nextValue === "true" : nextValue,
+          createHeuristic,
+          correctedAt: "2026-06-26T00:00:00.000Z",
+        });
+
+        setMessage(
+          `Saved ${result.correction.field} correction; triggers ${result.recalculationTriggers.join(", ")}.`,
+        );
+      }}
+    >
+      <div>
+        <label htmlFor="correction-field">Correction</label>
+        <select
+          id="correction-field"
+          onChange={(event) => {
+            const selectedField = event.target.value as CorrectionField;
+            setField(selectedField);
+            setNextValue(selectedField === "miles_eligibility" ? "false" : defaultCorrectionValue(selectedField));
+          }}
+          value={field}
+        >
+          {correctionFields.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label htmlFor="correction-value">New value</label>
+        <input
+          id="correction-value"
+          onChange={(event) => setNextValue(event.target.value)}
+          value={nextValue}
+        />
+      </div>
+      <label className="checkbox-field">
+        <input
+          checked={createHeuristic}
+          onChange={(event) => setCreateHeuristic(event.target.checked)}
+          type="checkbox"
+        />
+        Create heuristic
+      </label>
+      <button type="submit">Save correction</button>
+      <p aria-live="polite">{message}</p>
+    </form>
   );
 }
 
@@ -300,4 +396,21 @@ function ReviewRow({
       <strong>{impact}</strong>
     </article>
   );
+}
+
+function defaultCorrectionValue(field: CorrectionField) {
+  switch (field) {
+    case "category":
+      return "category_utilities";
+    case "merchant":
+      return "merchant_sp_services";
+    case "mcc":
+      return "4900";
+    case "card":
+      return "card_citi_rewards";
+    case "refund_match":
+      return "transaction_purchase";
+    case "miles_eligibility":
+      return "false";
+  }
 }
