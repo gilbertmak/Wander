@@ -194,6 +194,34 @@
       "uiSurface": "Import Workflow, Local Export, Security Controls",
       "releaseGate": "Security tests pass and real-data mode remains disabled for web or unknown platforms.",
       "owner": "security-compliance-review"
+    },
+    {
+      "requirementId": "REQ-FIRE-002",
+      "source": "Release 3 relational onboarding plan",
+      "epic": "R3-1",
+      "dataRule": "Wander Guide captures bundled onboarding answers as structured planner setup inputs before any planner data is persisted.",
+      "acceptanceCriteriaId": "AC-FIRE-002",
+      "automatedTestIds": [
+        "tests/onboarding/wanderGuide.test.ts",
+        "tests/App.test.tsx",
+        "tests/e2e/app-shell.spec.ts"
+      ],
+      "manualEvidence": "Desktop setup screenshot showing Wander Guide orb, timeline bundle, and progress state.",
+      "uiSurface": "Wander Guide Onboarding",
+      "releaseGate": "Onboarding unit, component, and Playwright tests pass.",
+      "owner": "product-design"
+    },
+    {
+      "requirementId": "REQ-DB-002",
+      "source": "Release 3 planner data model upgrade",
+      "epic": "R3-3",
+      "dataRule": "SQLite stores advisor-grade planner inputs, goals, projection runs, projection rows, and advisor insights with export/import coverage.",
+      "acceptanceCriteriaId": "AC-DB-002",
+      "automatedTestIds": ["tests/db/database.test.ts", "tests/db/exportImport.test.ts"],
+      "manualEvidence": "Migration dry run against a temporary database and export/import artifact review.",
+      "uiSurface": "Local Planner Data Layer",
+      "releaseGate": "Database migration, repository, and export/import tests pass.",
+      "owner": "solution-architecture"
     }
   ]
 }

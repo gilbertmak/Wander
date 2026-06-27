@@ -4,12 +4,21 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import type { DatabaseConnection } from "./client";
 import {
   accounts,
+  advisorInsights,
+  assetLiabilityAccounts,
   cardPeriodSummaries,
+  cpfAccounts,
   decisionTraces,
   expenseSnapshots,
+  financialGoals,
+  healthcareAssumptions,
+  incomeStreams,
   milesLeakageItems,
   plannerProfiles,
   plannedPurchases,
+  propertyProfiles,
+  projectionRuns,
+  projectionYears,
   profiles,
   refundTimelines,
   rewardLedger,
@@ -23,6 +32,15 @@ export type Profile = InferSelectModel<typeof profiles>;
 export type NewProfile = InferInsertModel<typeof profiles>;
 export type NewPlannerProfile = InferInsertModel<typeof plannerProfiles>;
 export type NewExpenseSnapshot = InferInsertModel<typeof expenseSnapshots>;
+export type NewIncomeStream = InferInsertModel<typeof incomeStreams>;
+export type NewAssetLiabilityAccount = InferInsertModel<typeof assetLiabilityAccounts>;
+export type NewCpfAccount = InferInsertModel<typeof cpfAccounts>;
+export type NewPropertyProfile = InferInsertModel<typeof propertyProfiles>;
+export type NewHealthcareAssumption = InferInsertModel<typeof healthcareAssumptions>;
+export type NewFinancialGoal = InferInsertModel<typeof financialGoals>;
+export type NewProjectionRun = InferInsertModel<typeof projectionRuns>;
+export type NewProjectionYear = InferInsertModel<typeof projectionYears>;
+export type NewAdvisorInsight = InferInsertModel<typeof advisorInsights>;
 export type NewDecisionTrace = InferInsertModel<typeof decisionTraces>;
 export type NewStatementImport = InferInsertModel<typeof statementImports>;
 export type NewStatementReconciliation = InferInsertModel<typeof statementReconciliations>;
@@ -40,6 +58,15 @@ export function createRepositories(connection: DatabaseConnection) {
     profiles: createProfileRepository(connection),
     plannerProfiles: createPlannerProfileRepository(connection),
     expenseSnapshots: createExpenseSnapshotRepository(connection),
+    incomeStreams: createIncomeStreamRepository(connection),
+    assetLiabilityAccounts: createAssetLiabilityAccountRepository(connection),
+    cpfAccounts: createCpfAccountRepository(connection),
+    propertyProfiles: createPropertyProfileRepository(connection),
+    healthcareAssumptions: createHealthcareAssumptionRepository(connection),
+    financialGoals: createFinancialGoalRepository(connection),
+    projectionRuns: createProjectionRunRepository(connection),
+    projectionYears: createProjectionYearRepository(connection),
+    advisorInsights: createAdvisorInsightRepository(connection),
     decisionTraces: createDecisionTraceRepository(connection),
     statementImports: createStatementImportRepository(connection),
     statementReconciliations: createStatementReconciliationRepository(connection),
@@ -51,6 +78,132 @@ export function createRepositories(connection: DatabaseConnection) {
     milesLeakageItems: createMilesLeakageItemRepository(connection),
     plannedPurchases: createPlannedPurchaseRepository(connection),
     rewardLedger: createRewardLedgerRepository(connection),
+  };
+}
+
+function createIncomeStreamRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewIncomeStream) =>
+      connection.db.insert(incomeStreams).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(incomeStreams)
+        .where(eq(incomeStreams.profileId, profileId))
+        .orderBy(desc(incomeStreams.createdAt))
+        .all(),
+  };
+}
+
+function createAssetLiabilityAccountRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewAssetLiabilityAccount) =>
+      connection.db.insert(assetLiabilityAccounts).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(assetLiabilityAccounts)
+        .where(eq(assetLiabilityAccounts.profileId, profileId))
+        .orderBy(desc(assetLiabilityAccounts.createdAt))
+        .all(),
+  };
+}
+
+function createCpfAccountRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewCpfAccount) =>
+      connection.db.insert(cpfAccounts).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(cpfAccounts)
+        .where(eq(cpfAccounts.profileId, profileId))
+        .orderBy(desc(cpfAccounts.asOfDate))
+        .all(),
+  };
+}
+
+function createPropertyProfileRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewPropertyProfile) =>
+      connection.db.insert(propertyProfiles).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(propertyProfiles)
+        .where(eq(propertyProfiles.profileId, profileId))
+        .orderBy(desc(propertyProfiles.createdAt))
+        .all(),
+  };
+}
+
+function createHealthcareAssumptionRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewHealthcareAssumption) =>
+      connection.db.insert(healthcareAssumptions).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(healthcareAssumptions)
+        .where(eq(healthcareAssumptions.profileId, profileId))
+        .orderBy(desc(healthcareAssumptions.createdAt))
+        .all(),
+  };
+}
+
+function createFinancialGoalRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewFinancialGoal) =>
+      connection.db.insert(financialGoals).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(financialGoals)
+        .where(eq(financialGoals.profileId, profileId))
+        .orderBy(desc(financialGoals.priority), desc(financialGoals.createdAt))
+        .all(),
+  };
+}
+
+function createProjectionRunRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewProjectionRun) =>
+      connection.db.insert(projectionRuns).values(value).returning().get(),
+    listForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(projectionRuns)
+        .where(eq(projectionRuns.profileId, profileId))
+        .orderBy(desc(projectionRuns.calculatedAt))
+        .all(),
+  };
+}
+
+function createProjectionYearRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewProjectionYear) =>
+      connection.db.insert(projectionYears).values(value).returning().get(),
+    listForRun: (projectionRunId: string) =>
+      connection.db
+        .select()
+        .from(projectionYears)
+        .where(eq(projectionYears.projectionRunId, projectionRunId))
+        .orderBy(projectionYears.yearIndex)
+        .all(),
+  };
+}
+
+function createAdvisorInsightRepository(connection: DatabaseConnection) {
+  return {
+    create: (value: NewAdvisorInsight) =>
+      connection.db.insert(advisorInsights).values(value).returning().get(),
+    listOpenForProfile: (profileId: string) =>
+      connection.db
+        .select()
+        .from(advisorInsights)
+        .where(and(eq(advisorInsights.profileId, profileId), eq(advisorInsights.status, "open")))
+        .orderBy(desc(advisorInsights.createdAt))
+        .all(),
   };
 }
 

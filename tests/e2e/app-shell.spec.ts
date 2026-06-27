@@ -22,6 +22,24 @@ test("desktop dashboard renders and primary buttons change state", async ({ page
   await expect(desktop.getByRole("heading", { name: "Current month applied" })).toBeVisible();
 });
 
+test("desktop setup opens Wander Guide onboarding", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 920 });
+  await page.goto("/");
+
+  const desktop = page.getByLabel("Wander desktop app");
+
+  await desktop.getByRole("button", { name: "Start guided setup" }).click();
+  await expect(desktop.getByRole("heading", { name: "Wander Guide" })).toBeVisible();
+  await expect(desktop.getByRole("heading", { name: "Your timeline" })).toBeVisible();
+
+  await page.getByLabel("Current age").fill("36");
+  await page.getByLabel("Target retirement age").fill("45");
+  await page.getByLabel("Planning age").fill("90");
+  await desktop.getByRole("button", { name: "Continue" }).click();
+
+  await expect(desktop.getByRole("heading", { name: "Your FIRE life" })).toBeVisible();
+});
+
 test("mobile shell renders landing page and switches to cards", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
