@@ -2434,6 +2434,42 @@
       ]
     },
     {
+      "id": "R3-ADVISOR-001",
+      "area": "advisor-insight-engine",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-FIRE-005", "R3-6"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "unit-test",
+      "scenario": "Advisor insight engine converts FIRE projection and goal-plan signals into prioritized recommendations with severity, confidence, and decision traces.",
+      "input": {
+        "commands": [
+          "npm test -- tests/planner/advisorInsightEngine.test.ts tests/explainability/decisionTrace.test.ts"
+        ],
+        "signals": [
+          "FIRE ready age",
+          "goal monthly shortfall",
+          "retirement goal conflict",
+          "emergency reserve months",
+          "expense trend",
+          "CPF retirement sum status"
+        ]
+      },
+      "expected": [
+        "Critical recommendations sort above warnings and informational insights.",
+        "Savings gaps, goal conflicts, emergency reserve gaps, and spending drift create actionable recommendations.",
+        "Clean plans produce an on-track insight.",
+        "Every insight includes confidence and a redacted decision trace.",
+        "Insights can be mapped to the advisor_insights repository insert shape."
+      ],
+      "passCriteria": [
+        "Advisor insight unit tests pass.",
+        "Decision trace redaction tests pass.",
+        "No advisor recommendation is emitted without an explanation trace."
+      ]
+    },
+    {
       "id": "RELEASE-001",
       "area": "release-gate",
       "priority": "blocker",
