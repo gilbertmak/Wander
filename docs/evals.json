@@ -2399,6 +2399,77 @@
       ]
     },
     {
+      "id": "R3-GOALS-001",
+      "area": "goals-gap-planner",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-FIRE-004", "R3-5"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "unit-test",
+      "scenario": "Goals and gap planner ranks active goals and calculates target gaps, monthly funding needs, FIRE conflicts, pressure labels, and next best actions.",
+      "input": {
+        "commands": ["npm test -- tests/planner/goalGapPlanner.test.ts"],
+        "goalSignals": [
+          "goal type",
+          "priority",
+          "target amount",
+          "current amount",
+          "target date",
+          "inflation adjustment",
+          "retirement-year projection"
+        ]
+      },
+      "expected": [
+        "Every active goal receives remaining gap and required monthly funding values.",
+        "Inflation-adjusted goals grow to the target date.",
+        "Goals that reduce retirement-year FIRE assets below target are marked as FIRE conflicts.",
+        "Overdue unfunded goals are blocked.",
+        "The plan exposes concise next best actions."
+      ],
+      "passCriteria": [
+        "Goal gap planner unit tests pass.",
+        "Goal pressure labels are deterministic.",
+        "The output can explain why a goal is funded, on track, watch, shortfall, or blocked."
+      ]
+    },
+    {
+      "id": "R3-ADVISOR-001",
+      "area": "advisor-insight-engine",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-FIRE-005", "R3-6"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "unit-test",
+      "scenario": "Advisor insight engine converts FIRE projection and goal-plan signals into prioritized recommendations with severity, confidence, and decision traces.",
+      "input": {
+        "commands": [
+          "npm test -- tests/planner/advisorInsightEngine.test.ts tests/explainability/decisionTrace.test.ts"
+        ],
+        "signals": [
+          "FIRE ready age",
+          "goal monthly shortfall",
+          "retirement goal conflict",
+          "emergency reserve months",
+          "expense trend",
+          "CPF retirement sum status"
+        ]
+      },
+      "expected": [
+        "Critical recommendations sort above warnings and informational insights.",
+        "Savings gaps, goal conflicts, emergency reserve gaps, and spending drift create actionable recommendations.",
+        "Clean plans produce an on-track insight.",
+        "Every insight includes confidence and a redacted decision trace.",
+        "Insights can be mapped to the advisor_insights repository insert shape."
+      ],
+      "passCriteria": [
+        "Advisor insight unit tests pass.",
+        "Decision trace redaction tests pass.",
+        "No advisor recommendation is emitted without an explanation trace."
+      ]
+    },
+    {
       "id": "RELEASE-001",
       "area": "release-gate",
       "priority": "blocker",
