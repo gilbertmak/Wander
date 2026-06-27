@@ -236,6 +236,21 @@
       "owner": "full-stack-delivery"
     },
     {
+      "requirementId": "REQ-FIRE-005",
+      "source": "Release 3 advisor insight engine",
+      "epic": "R3-6",
+      "dataRule": "Advisor insight engine converts FIRE projection, goal gaps, reserve coverage, savings gap, and expense drift into prioritized insights with severity, recommended action, confidence, and decision trace.",
+      "acceptanceCriteriaId": "AC-FIRE-005",
+      "automatedTestIds": [
+        "tests/planner/advisorInsightEngine.test.ts",
+        "tests/explainability/decisionTrace.test.ts"
+      ],
+      "manualEvidence": "Advisor review showing no recommendation is presented without confidence, caveat, and why-this trace.",
+      "uiSurface": "Advisor Insight Engine",
+      "releaseGate": "Advisor insight tests pass and every generated insight includes a decision trace.",
+      "owner": "full-stack-delivery"
+    },
+    {
       "requirementId": "REQ-DB-002",
       "source": "Release 3 planner data model upgrade",
       "epic": "R3-3",

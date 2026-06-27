@@ -6,6 +6,7 @@ export type TraceSourceModule =
   | "reward_evaluator"
   | "trust_score"
   | "card_planner"
+  | "advisor_insight"
   | "recurring_detector"
   | "backup_restore";
 
