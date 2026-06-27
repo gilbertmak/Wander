@@ -41,6 +41,24 @@ describe("App shell", () => {
     expect(within(desktop).getByRole("heading", { name: "Current month applied" }));
   });
 
+  it("opens Wander Guide setup and advances bundled onboarding questions", async () => {
+    render(<App />);
+
+    const desktop = screen.getByLabelText("Wander desktop app");
+    await userEvent.click(within(desktop).getByRole("button", { name: "Start guided setup" }));
+
+    expect(within(desktop).getByRole("heading", { name: "Wander Guide" })).toBeInTheDocument();
+    expect(within(desktop).getByRole("heading", { name: "Your timeline" })).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Current age"), "36");
+    await userEvent.type(screen.getByLabelText("Target retirement age"), "45");
+    await userEvent.type(screen.getByLabelText("Planning age"), "90");
+    await userEvent.click(within(desktop).getByRole("button", { name: "Continue" }));
+
+    expect(within(desktop).getByRole("heading", { name: "Your FIRE life" })).toBeInTheDocument();
+    expect(within(desktop).getByText(/Step 2 of 10/i)).toBeInTheDocument();
+  });
+
   it("opens and closes the explanation drawer from transaction actions", async () => {
     render(<App />);
 

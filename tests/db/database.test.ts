@@ -19,10 +19,28 @@ describe("SQLite database layer", () => {
     const firstRun = runMigrations(connection);
     const secondRun = runMigrations(connection);
 
-    expect(firstRun.applied).toEqual(["0001", "0002", "0003", "0004", "0005", "0006", "0007"]);
+    expect(firstRun.applied).toEqual([
+      "0001",
+      "0002",
+      "0003",
+      "0004",
+      "0005",
+      "0006",
+      "0007",
+      "0008",
+    ]);
     expect(firstRun.skipped).toEqual([]);
     expect(secondRun.applied).toEqual([]);
-    expect(secondRun.skipped).toEqual(["0001", "0002", "0003", "0004", "0005", "0006", "0007"]);
+    expect(secondRun.skipped).toEqual([
+      "0001",
+      "0002",
+      "0003",
+      "0004",
+      "0005",
+      "0006",
+      "0007",
+      "0008",
+    ]);
 
     const tableCount = connection.sqlite
       .prepare(
@@ -85,6 +103,58 @@ describe("SQLite database layer", () => {
       annualizedExpensesMinor: 5_110_000,
       source: "statement_import",
     });
+    repositories.incomeStreams.create({
+      id: "income_1",
+      profileId: "profile_1",
+      label: "Salary",
+      incomeType: "salary",
+      annualAmountMinor: 18_000_000,
+      annualBonusMinor: 2_000_000,
+      growthRateBasisPoints: 300,
+    });
+    repositories.assetLiabilityAccounts.create({
+      id: "asset_1",
+      profileId: "profile_1",
+      accountLabel: "Brokerage",
+      accountKind: "asset",
+      assetClass: "brokerage",
+      balanceMinor: 25_000_000,
+      expectedReturnBasisPoints: 550,
+      liquidity: "liquid",
+    });
+    repositories.cpfAccounts.create({
+      id: "cpf_1",
+      profileId: "profile_1",
+      oaBalanceMinor: 6_000_000,
+      saBalanceMinor: 8_000_000,
+      maBalanceMinor: 3_000_000,
+      asOfDate: "2026-06-30",
+    });
+    repositories.propertyProfiles.create({
+      id: "property_1",
+      profileId: "profile_1",
+      propertyType: "hdb",
+      estimatedValueMinor: 70_000_000,
+      outstandingMortgageMinor: 20_000_000,
+      monthlyPaymentMinor: 220_000,
+    });
+    repositories.healthcareAssumptions.create({
+      id: "healthcare_1",
+      profileId: "profile_1",
+      annualPremiumMinor: 240_000,
+      annualOutOfPocketMinor: 100_000,
+      escalationRateBasisPoints: 400,
+    });
+    repositories.financialGoals.create({
+      id: "goal_1",
+      profileId: "profile_1",
+      goalType: "emergency_fund",
+      label: "Emergency fund",
+      targetAmountMinor: 36_000_000,
+      currentAmountMinor: 20_000_000,
+      targetDate: "2027-06-30",
+      priority: 1,
+    });
     repositories.decisionTraces.create({
       id: "trace_1",
       profileId: "profile_1",
@@ -97,6 +167,44 @@ describe("SQLite database layer", () => {
       confidenceScore: 0.91,
       explanationText: "Trust score uses parser confidence.",
       caveatJson: "[]",
+    });
+    repositories.projectionRuns.create({
+      id: "projection_run_1",
+      profileId: "profile_1",
+      runType: "baseline",
+      inputHash: "input_hash_1",
+      assumptionsJson: JSON.stringify({ swr: 0.035 }),
+      resultSummaryJson: JSON.stringify({ fiAge: 45 }),
+      confidenceScore: 0.88,
+      calculatedAt: "2026-06-30T00:00:00.000Z",
+    });
+    repositories.projectionYears.create({
+      id: "projection_year_1",
+      profileId: "profile_1",
+      projectionRunId: "projection_run_1",
+      yearIndex: 0,
+      calendarYear: 2026,
+      age: 36,
+      liquidAssetsMinor: 25_000_000,
+      cpfBalanceMinor: 17_000_000,
+      propertyEquityMinor: 50_000_000,
+      annualIncomeMinor: 18_000_000,
+      annualExpensesMinor: 5_110_000,
+      annualSavingsMinor: 5_400_000,
+      fireTargetMinor: 162_000_000,
+      fireProgressBasisPoints: 5600,
+    });
+    repositories.advisorInsights.create({
+      id: "insight_1",
+      profileId: "profile_1",
+      projectionRunId: "projection_run_1",
+      insightType: "savings_gap",
+      severity: "warning",
+      title: "Monthly savings gap",
+      body: "Increase monthly savings to hit the target retirement age.",
+      recommendedAction: "Review spending and goal timing.",
+      confidenceScore: 0.82,
+      traceId: "trace_1",
     });
     repositories.transactions.create({
       id: "transaction_1",
@@ -216,6 +324,15 @@ describe("SQLite database layer", () => {
     );
     expect(repositories.accounts.listForProfile("profile_1")).toHaveLength(1);
     expect(repositories.expenseSnapshots.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.incomeStreams.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.assetLiabilityAccounts.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.cpfAccounts.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.propertyProfiles.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.healthcareAssumptions.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.financialGoals.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.projectionRuns.listForProfile("profile_1")).toHaveLength(1);
+    expect(repositories.projectionYears.listForRun("projection_run_1")).toHaveLength(1);
+    expect(repositories.advisorInsights.listOpenForProfile("profile_1")).toHaveLength(1);
     expect(repositories.decisionTraces.listForSourceRecord("transaction_1")).toHaveLength(1);
     expect(repositories.transactions.listReviewItems("profile_1")).toHaveLength(1);
     expect(repositories.statementReconciliations.getByImportId("import_1")?.status).toBe(
