@@ -2365,6 +2365,40 @@
       ]
     },
     {
+      "id": "R3-FIRE-001",
+      "area": "singapore-fire-engine",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-FIRE-003", "R3-4"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "unit-test",
+      "scenario": "Singapore FIRE projection engine models CPF contribution/allocation, CPF LIFE payout, healthcare reserve, property equity treatment, retirement spending, and FIRE milestones using configurable assumptions.",
+      "input": {
+        "commands": ["npm test -- tests/planner/singaporeFireEngine.test.ts"],
+        "assumptionInputs": [
+          "annual CPF wage ceiling",
+          "CPF account interest rates",
+          "Full Retirement Sum",
+          "healthcare reserve",
+          "CPF LIFE payout age and payout rate",
+          "property unlock ratio"
+        ]
+      },
+      "expected": [
+        "CPF contribution is capped by the configured annual wage ceiling.",
+        "CPF allocations change by age band and route post-55 retirement allocations to RA.",
+        "CPF LIFE payout reduces the portfolio-funded retirement spending target.",
+        "Owner-occupied property is excluded from FIRE assets unless an unlock ratio is configured.",
+        "Projection rows expose target retirement age, FIRE ready, CPF FRS, CPF LIFE, and life expectancy milestones."
+      ],
+      "passCriteria": [
+        "Singapore FIRE engine unit tests pass.",
+        "Projection assumptions are returned with the result for explainability.",
+        "CPF policy-sensitive defaults can be overridden without code changes."
+      ]
+    },
+    {
       "id": "RELEASE-001",
       "area": "release-gate",
       "priority": "blocker",

@@ -212,6 +212,18 @@
       "owner": "product-design"
     },
     {
+      "requirementId": "REQ-FIRE-003",
+      "source": "Release 3 Singapore FIRE calculation engine",
+      "epic": "R3-4",
+      "dataRule": "Singapore FIRE projections model configurable CPF contribution bands, CPF account allocation, CPF LIFE payout, healthcare reserve, retirement spending, property equity treatment, and FIRE milestones.",
+      "acceptanceCriteriaId": "AC-FIRE-003",
+      "automatedTestIds": ["tests/planner/singaporeFireEngine.test.ts"],
+      "manualEvidence": "Planner calculation review using a synthetic Singapore profile with CPF, property, healthcare, and retirement drawdown assumptions.",
+      "uiSurface": "Planner Engine",
+      "releaseGate": "Singapore FIRE engine unit tests pass and assumptions remain configurable.",
+      "owner": "full-stack-delivery"
+    },
+    {
       "requirementId": "REQ-DB-002",
       "source": "Release 3 planner data model upgrade",
       "epic": "R3-3",
