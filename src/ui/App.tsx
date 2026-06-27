@@ -1,69 +1,107 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { applyCorrectionDraft, type CorrectionField } from "../review/correctionWorkflow";
 import { calculateImpactPreview, type ImpactPreview } from "../review/impactPreview";
 import type { ReviewTransaction } from "../review/reviewInboxModel";
-import { useAppShellStore, type AppTab } from "../state/appShellStore";
-import { useAppShellStore, type MobileTab } from "../state/appShellStore";
+import { useAppShellStore, type MobileTab, type ProductSurface } from "../state/appShellStore";
 
-const mobileTabs: Array<{ id: MobileTab; label: string; badge?: string }> = [
-  { id: "home", label: "Home" },
-  { id: "plan", label: "Plan" },
-  { id: "transactions", label: "Txns", badge: "7" },
-  { id: "cards", label: "Cards", badge: "2" },
-  { id: "profile", label: "Profile" },
+const mobileTabs: Array<{ id: MobileTab; label: string; shortLabel: string; badge?: string }> = [
+  { id: "home", label: "Home", shortLabel: "Home" },
+  { id: "plan", label: "Plan", shortLabel: "Plan" },
+  { id: "transactions", label: "Transactions", shortLabel: "Txns", badge: "7" },
+  { id: "cards", label: "Cards", shortLabel: "Cards", badge: "2" },
+  { id: "profile", label: "Profile", shortLabel: "Me" },
 ];
 
-const homeMetrics = [
-  { label: "FI number", value: "S$1.72M" },
-  { label: "Current corpus", value: "S$842K" },
-  { label: "FI age", value: "45" },
+const surfaceLabels: Record<ProductSurface, string> = {
+  home: "Dashboard",
+  cards: "Cards & miles",
+  desktop: "Planner",
+};
+
+const topMetrics = [
+  { label: "FI Progress", value: "68%", detail: "Age 42 target", tone: "good" },
+  { label: "Net monthly spend", value: "S$4,230", detail: "8.2% below Apr", tone: "good" },
+  { label: "Miles earned", value: "+18,450", detail: "this month", tone: "gold" },
+  { label: "Redeemable", value: "72,000", detail: "miles", tone: "gold" },
+  { label: "Next chunk", value: "S$184", detail: "to next 10k miles", tone: "good" },
 ];
 
-const cardMetrics = [
-  { label: "Redeemable", value: "48,000 mi", tone: "progress" },
-  { label: "Pending", value: "7,240 mi", tone: "warning" },
-  { label: "Reversed", value: "-1,200 mi", tone: "reversal" },
+const spendBreakdown = [
+  { label: "Housing", value: "33%" },
+  { label: "Transport", value: "20%" },
+  { label: "Food", value: "15%" },
+  { label: "Shopping", value: "12%" },
+  { label: "Lifestyle", value: "10%" },
+  { label: "Others", value: "10%" },
 ];
 
-const leakageReasons = [
-  { label: "Missing card assignment", value: "420 mi", action: "Review 3 transactions" },
-  { label: "Cap exhausted", value: "260 mi", action: "Switch card next month" },
-  { label: "Low-confidence MCC", value: "180 mi", action: "Confirm MCC" },
-];
-
-const cardPlannerResults = [
-  { card: "HSBC Revolution", miles: "480 mi", caveat: "S$880 cap left" },
-  { card: "UOB Lady's", miles: "480 mi", caveat: "Dining category selected" },
-  { card: "DBS Woman's World", miles: "48 mi", caveat: "Offline spend ineligible" },
-];
-
-const reviewGroups = [
+const transactions = [
   {
-    label: "Confirm merchant",
-    count: 2,
-    amount: "S$188",
-    detail: "Local aliases improve future imports.",
+    date: "18 May",
+    merchant: "Shopee SG",
+    note: "SHP-SG-123456",
+    category: "Shopping",
+    mcc: "5812",
+    confidence: "91%",
+    card: "Citi Rewards",
+    amount: "-128.90",
+    status: "Eligible",
+    miles: "+516 miles",
+    tone: "eligible",
   },
   {
-    label: "Confirm MCC",
-    count: 1,
-    amount: "S$94",
-    detail: "Miles calculation waits for merchant category code confidence.",
+    date: "18 May",
+    merchant: "Shopee Refund",
+    note: "REF-SG-123456",
+    category: "Shopping",
+    mcc: "5812",
+    confidence: "91%",
+    card: "Citi Rewards",
+    amount: "+128.90",
+    status: "Refund reversal",
+    miles: "-516 miles",
+    tone: "refund",
   },
   {
-    label: "Assign card",
-    count: 1,
-    amount: "S$36",
-    detail: "Card assignment unlocks earn and cap checks.",
+    date: "17 May",
+    merchant: "Cold Storage",
+    note: "TAMPINES 1",
+    category: "Groceries",
+    mcc: "5422",
+    confidence: "95%",
+    card: "DBS WWMC",
+    amount: "-86.45",
+    status: "Eligible",
+    miles: "+172 miles",
+    tone: "eligible",
   },
-];
-
-const refundTimelineEvents = [
-  { label: "Original charge", value: "S$129 · Apple App Store" },
-  { label: "Expected refund", value: "S$129 by 1 Jul" },
-  { label: "Received refund", value: "Pending" },
-  { label: "Miles reversal", value: "-516 mi when received" },
+  {
+    date: "16 May",
+    merchant: "Spotify Pte. Ltd.",
+    note: "SPOTIFY",
+    category: "Entertainment",
+    mcc: "5733",
+    confidence: "96%",
+    card: "HSBC Revolution",
+    amount: "-11.98",
+    status: "Eligible",
+    miles: "+22 miles",
+    tone: "eligible",
+  },
+  {
+    date: "14 May",
+    merchant: "Amazon SG",
+    note: "AMZN Mktp",
+    category: "Shopping",
+    mcc: "5942",
+    confidence: "72%",
+    card: "DBS Altitude",
+    amount: "-499.00",
+    status: "Check category",
+    miles: "0 miles",
+    tone: "review",
+  },
 ];
 
 const correctionFields: Array<{ value: CorrectionField; label: string }> = [
@@ -76,16 +114,16 @@ const correctionFields: Array<{ value: CorrectionField; label: string }> = [
 ];
 
 const sampleReviewTransaction: ReviewTransaction = {
-  id: "transaction_sp_services",
-  postedDate: "2026-06-20",
-  descriptionNormalized: "sp services utilities",
-  amountMinor: -9400,
-  categoryId: null,
-  mccCode: "4900",
-  merchantId: "merchant_sp_services",
-  cardId: "card_citi_rewards",
-  confidenceScore: 0.61,
-  eligibleForMiles: true,
+  id: "transaction_amazon_sg",
+  postedDate: "2026-05-14",
+  descriptionNormalized: "amazon sg amzn mktp",
+  amountMinor: -49_900,
+  categoryId: "category_shopping",
+  mccCode: "5942",
+  merchantId: "merchant_amazon_sg",
+  cardId: "card_dbs_altitude",
+  confidenceScore: 0.72,
+  eligibleForMiles: false,
   needsReview: true,
   transactionKind: "purchase",
 };
@@ -110,315 +148,580 @@ const sampleImpactPreview = calculateImpactPreview({
 });
 
 export function App() {
-  { label: "Net Worth", value: "$742k", detail: "+$4.8k this month" },
-  { label: "CPF", value: "$218k", detail: "29% of FI corpus" },
-  { label: "Net Spend", value: "$4.2k", detail: "$620 below plan" },
-  { label: "Miles Bank", value: "86.4k", detail: "72k redeemable" },
-];
-
-const reviewRows = [
-  {
-    merchant: "Grab *Trip",
-    amount: "-$18.40",
-    status: "Likely MCC",
-    impact: "+74 miles",
-    confidence: "82%",
-  },
-  {
-    merchant: "Apple Refund",
-    amount: "+$129.00",
-    status: "Matched refund",
-    impact: "-516 miles",
-    confidence: "94%",
-  },
-  {
-    merchant: "Cold Storage",
-    amount: "-$67.20",
-    status: "Needs category",
-    impact: "Expense snapshot",
-    confidence: "61%",
-  },
-];
-
-export function App() {
-  const activeSurface = useAppShellStore((state) => state.activeSurface);
-  const setActiveSurface = useAppShellStore((state) => state.setActiveSurface);
   const activeTab = useAppShellStore((state) => state.activeTab);
   const setActiveTab = useAppShellStore((state) => state.setActiveTab);
+  const activeSurface = useAppShellStore((state) => state.activeSurface);
+  const setActiveSurface = useAppShellStore((state) => state.setActiveSurface);
+  const [plannerApplied, setPlannerApplied] = useState(false);
+  const [reviewCompleted, setReviewCompleted] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
 
   return (
     <main className="app-frame">
-      <section className="mobile-shell" aria-label="Mobile application preview">
-        <div className="mobile-status" aria-hidden="true">
-          <span>9:41</span>
-          <span>SG</span>
-        </div>
-
-        <div className="mobile-content">
-          {activeTab === "home" && <MobileHome />}
-          {activeTab === "cards" && <CardsTab />}
-          {activeTab === "plan" && (
-            <PlaceholderPanel
-              title="Plan"
-              copy="Scenario comparison, expense snapshots, and FIRE assumptions land here after the database and planner epics."
-            />
-          )}
-          {activeTab === "transactions" && (
-            <PlaceholderPanel
-              title="Transactions"
-              copy="Imported statement rows, refund matches, categories, and MCC review will be managed from this surface."
-            />
-          )}
-          {activeTab === "profile" && (
-            <PlaceholderPanel
-              title="Profile"
-              copy="Profile settings, local data controls, export, and card setup will live here."
-            />
-          )}
-        </div>
-
-        <nav className="bottom-tabs" aria-label="Mobile tabs">
-          {mobileTabs.map((tab) => (
-            <button
-              aria-current={tab.id === activeTab ? "page" : undefined}
-              className={tab.id === activeTab ? "active" : ""}
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              type="button"
-            >
-              <span>{tab.label}</span>
-              {tab.badge ? <strong aria-label={`${tab.badge} pending`}>{tab.badge}</strong> : null}
-            </button>
-          ))}
-        </nav>
-      </section>
-
-      <section className="workspace" aria-label="Desktop workspace preview">
-        <aside className="sidebar" aria-label="Desktop navigation">
-          <div>
-            <p className="eyebrow">Wander</p>
-            <h1>Financial independence cockpit</h1>
-          </div>
-          <nav className="desktop-nav" aria-label="Workspace sections">
-            {(["home", "cards", "desktop"] as const).map((surface) => (
-              <button
-                aria-current={surface === activeSurface ? "page" : undefined}
-                className={surface === activeSurface ? "active" : ""}
-                key={surface}
-                onClick={() => setActiveSurface(surface)}
-                type="button"
-              >
-                {surfaceLabels[surface]}
-              </button>
-            ))}
-          </nav>
-        </aside>
-
-        <DesktopDashboard activeSurface={activeSurface} />
-      </section>
+      <DesktopShell
+        activeSurface={activeSurface}
+        onApplyPlanner={() => setPlannerApplied(true)}
+        onExplain={() => setWhyOpen(true)}
+        onReviewAll={() => setReviewCompleted(true)}
+        plannerApplied={plannerApplied}
+        reviewCompleted={reviewCompleted}
+        setActiveSurface={setActiveSurface}
+      />
+      <MobileShell
+        activeTab={activeTab}
+        onApplyPlanner={() => setPlannerApplied(true)}
+        plannerApplied={plannerApplied}
+        setActiveTab={setActiveTab}
+      />
+      {whyOpen && <WhyThisDrawer onClose={() => setWhyOpen(false)} />}
     </main>
   );
 }
 
 function DesktopShell({
-  activeTab,
-  setActiveTab,
+  activeSurface,
+  setActiveSurface,
+  plannerApplied,
+  reviewCompleted,
+  onApplyPlanner,
+  onReviewAll,
+  onExplain,
 }: {
-  activeTab: AppTab;
-  setActiveTab: (tab: AppTab) => void;
+  activeSurface: ProductSurface;
+  setActiveSurface: (surface: ProductSurface) => void;
+  plannerApplied: boolean;
+  reviewCompleted: boolean;
+  onApplyPlanner: () => void;
+  onReviewAll: () => void;
+  onExplain: () => void;
 }) {
-  const [whyOpen, setWhyOpen] = useState(false);
-
   return (
-    <section className="desktop-shell" aria-label="Wander desktop dashboard">
+    <section className="desktop-shell" aria-label="Wander desktop app">
       <aside className="desktop-sidebar" aria-label="Desktop navigation">
         <div>
-          <p className="eyebrow">Wander</p>
-          <h1>Command center</h1>
+          <p className="brand">Wander</p>
+          <p className="eyebrow">Local-first FIRE</p>
         </div>
-        <nav aria-label="Desktop primary">
-          {tabs.map((tab) => (
+        <nav aria-label="Workspace sections">
+          {(Object.keys(surfaceLabels) as ProductSurface[]).map((surface) => (
             <button
-              aria-current={activeTab === tab.id ? "page" : undefined}
-              className={activeTab === tab.id ? "active" : ""}
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              aria-current={activeSurface === surface ? "page" : undefined}
+              className={activeSurface === surface ? "active" : ""}
+              key={surface}
+              onClick={() => setActiveSurface(surface)}
               type="button"
             >
-              {tab.label}
+              {surfaceLabels[surface]}
             </button>
           ))}
         </nav>
+        <button className="import-button" onClick={onReviewAll} type="button">
+          Import statements
+        </button>
       </aside>
 
-      <section className="desktop-main" aria-labelledby="desktop-title">
-        <div className="desktop-hero">
-          <div>
-            <p className="eyebrow">FIRE dashboard</p>
-            <h2 id="desktop-title">FI at 45, with 49% funded</h2>
-            <p>Scenario, expense, transaction review, and miles impacts in one working surface.</p>
+      <section className="desktop-workspace">
+        <header className="desktop-topbar">
+          <h1>{surfaceLabels[activeSurface]}</h1>
+          <div className="topbar-actions">
+            <button type="button">1-31 May 2026</button>
+            <button type="button">SGD</button>
+            <span aria-label="Profile initials">GM</span>
           </div>
-          <div className="desktop-progress" aria-label="FIRE progress 49 percent">
-            <span>49%</span>
-          </div>
-        </div>
+        </header>
 
-        <section className="review-inbox" aria-labelledby="review-title">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Review inbox</p>
-              <h2 id="review-title">3 items need confirmation</h2>
-            </div>
-            <button type="button">Review all</button>
-          </div>
-          <CorrectionPanel />
-          <ImpactPreviewPanel preview={sampleImpactPreview} />
-          <ReviewGroupPanel />
-          <RefundTimelinePanel />
-          <ReviewRow
-            title="SP Services Utilities"
-            meta="MCC 4900 · Utilities · no miles"
-            impact="Expense snapshot +S$94"
-            diagnostic="Matched merchant text, category confidence 95%"
-            onExplain={() => setWhyOpen(true)}
-            trustLabel="Medium trust"
-            tone="warning"
+        {activeSurface === "home" && (
+          <DashboardSurface
+            onApplyPlanner={onApplyPlanner}
+            onExplain={onExplain}
+            onReviewAll={onReviewAll}
+            plannerApplied={plannerApplied}
+            reviewCompleted={reviewCompleted}
           />
-          <ReviewRow
-            title="Grab Trip Singapore"
-            meta="MCC 4121 · Transport · 4 mpd eligible"
-            impact="DBS block needs S$50"
-            diagnostic="Refund matcher found no offset"
-            onExplain={() => setWhyOpen(true)}
-            trustLabel="High trust"
-            tone="progress"
-          />
-          <ReviewRow
-            title="Town Council Payment"
-            meta="MCC 9399 · Government · excluded"
-            impact="No miles earned"
-            diagnostic="Learned from prior correction"
-            onExplain={() => setWhyOpen(true)}
-            trustLabel="Needs review"
-            tone="success"
-          />
-        </section>
+        )}
+        {activeSurface === "cards" && (
+          <CardsSurface onApplyPlanner={onApplyPlanner} plannerApplied={plannerApplied} />
+        )}
+        {activeSurface === "desktop" && (
+          <PlannerSurface preview={sampleImpactPreview} plannerApplied={plannerApplied} />
+        )}
+      </section>
+    </section>
+  );
+}
+
+function DashboardSurface({
+  plannerApplied,
+  reviewCompleted,
+  onApplyPlanner,
+  onReviewAll,
+  onExplain,
+}: {
+  plannerApplied: boolean;
+  reviewCompleted: boolean;
+  onApplyPlanner: () => void;
+  onReviewAll: () => void;
+  onExplain: () => void;
+}) {
+  return (
+    <div className="dashboard-grid">
+      <section className="metric-ribbon" aria-label="Monthly scorecard">
+        {topMetrics.map((metric) => (
+          <article className={metric.tone} key={metric.label}>
+            <span>{metric.label}</span>
+            <strong>{metric.value}</strong>
+            <p>{metric.detail}</p>
+          </article>
+        ))}
+        <button className="primary-action" onClick={onApplyPlanner} type="button">
+          {plannerApplied ? "Applied" : "Apply to planner"}
+        </button>
       </section>
 
-      <aside className="desktop-insights" aria-label="Insights">
-        <section>
-          <p className="eyebrow">Plan</p>
-          <h2>Scenario spread</h2>
-          <dl>
-            <div>
-              <dt>Optimistic</dt>
-              <dd>FI 2 years earlier</dd>
-            </div>
-            <div>
-              <dt>Conservative</dt>
-              <dd>Target +S$86K</dd>
-            </div>
-          </dl>
-        </section>
-        <section>
-          <p className="eyebrow">Cards</p>
-          <h2>Miles health</h2>
-          <dl>
-            <div>
-              <dt>Redeemable</dt>
-              <dd>48,000 mi</dd>
-            </div>
-            <div>
-              <dt>Pending</dt>
-              <dd>7,240 mi</dd>
-            </div>
-            <div>
-              <dt>Reversed</dt>
-              <dd>-1,200 mi</dd>
-            </div>
-          </dl>
-        </section>
+      <section className="review-table-card" aria-labelledby="review-title">
+        <div className="section-heading">
+          <div>
+            <h2 id="review-title">Review Inbox</h2>
+            <span>{reviewCompleted ? "0 needs review" : "12 needs review"}</span>
+          </div>
+          <div className="table-tools">
+            <input aria-label="Search merchant or note" placeholder="Search merchant or note" />
+            <button onClick={onReviewAll} type="button">
+              {reviewCompleted ? "Reviewed" : "Review all"}
+            </button>
+          </div>
+        </div>
+
+        <table aria-label="Imported transaction review">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Merchant</th>
+              <th>Category</th>
+              <th>MCC & confidence</th>
+              <th>Card</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((transaction) => (
+              <tr className={transaction.tone} key={`${transaction.date}-${transaction.merchant}`}>
+                <td>{transaction.date}</td>
+                <td>
+                  <strong>{transaction.merchant}</strong>
+                  <span>{transaction.note}</span>
+                </td>
+                <td>
+                  <span className="category-pill">{transaction.category}</span>
+                </td>
+                <td>
+                  <strong>MCC {transaction.mcc}</strong>
+                  <span>Confidence {transaction.confidence}</span>
+                </td>
+                <td>{transaction.card}</td>
+                <td>{transaction.amount}</td>
+                <td>
+                  <span className="status-pill">{transaction.status}</span>
+                  <small>{transaction.miles}</small>
+                </td>
+                <td>
+                  <button onClick={onExplain} type="button">
+                    Why this?
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <aside className="insight-column" aria-label="Insights">
+        <FiImpactCard onApplyPlanner={onApplyPlanner} plannerApplied={plannerApplied} />
+        <MilesOverviewCard />
+        <ExpenseSnapshotCard />
       </aside>
-      {whyOpen && <WhyThisDrawer onClose={() => setWhyOpen(false)} />}
-    </section>
+    </div>
   );
 }
 
-function ImpactPreviewPanel({ preview }: { preview: ImpactPreview }) {
+function FiImpactCard({
+  plannerApplied,
+  onApplyPlanner,
+}: {
+  plannerApplied: boolean;
+  onApplyPlanner: () => void;
+}) {
   return (
-    <section className="impact-preview" aria-labelledby="impact-preview-title">
-      <div>
-        <p className="eyebrow">Impact preview</p>
-        <h3 id="impact-preview-title">{preview.summary}</h3>
-      </div>
-      <dl>
+    <section className="insight-card">
+      <p className="eyebrow">FI impact</p>
+      <h2>If applied this month</h2>
+      <dl className="impact-list">
         <div>
-          <dt>Monthly net spend</dt>
-          <dd>{formatSignedMoney(preview.monthlyNetSpendDeltaMinor)}</dd>
+          <dt>FIRE number</dt>
+          <dd>S$1,620,000</dd>
+          <strong>-S$12,300</strong>
         </div>
         <div>
-          <dt>Annual expenses</dt>
-          <dd>{formatSignedMoney(preview.annualizedExpensesDeltaMinor)}</dd>
-        </div>
-        <div>
-          <dt>FI age</dt>
-          <dd>
-            {preview.fiAgeDelta === undefined
-              ? "n/a"
-              : `${preview.fiAgeDelta > 0 ? "+" : ""}${preview.fiAgeDelta}`}
-          </dd>
-        </div>
-        <div>
-          <dt>Miles</dt>
-          <dd>{preview.milesDelta > 0 ? `+${preview.milesDelta}` : preview.milesDelta}</dd>
+          <dt>Retirement age</dt>
+          <dd>45 years 3 months</dd>
+          <strong>-2 months</strong>
         </div>
       </dl>
+      <button className="primary-action full" onClick={onApplyPlanner} type="button">
+        {plannerApplied ? "Planner updated" : "Apply to planner"}
+      </button>
     </section>
   );
 }
 
-function ReviewGroupPanel() {
+function MilesOverviewCard() {
   return (
-    <section className="review-groups" aria-label="Grouped review queue">
-      {reviewGroups.map((group) => (
-        <article key={group.label}>
-          <div>
-            <span>{group.count} open</span>
-            <h3>{group.label}</h3>
-            <p>
-              {group.amount} impact · {group.detail}
-            </p>
-          </div>
-          <div className="review-actions" aria-label={`${group.label} actions`}>
-            <button type="button">Accept</button>
-            <button type="button">Edit</button>
-            <button type="button">Ignore</button>
-          </div>
-        </article>
-      ))}
-    </section>
-  );
-}
-
-function RefundTimelinePanel() {
-  return (
-    <section className="refund-timeline" aria-label="Refund tracker timeline">
-      <div className="section-heading compact">
+    <section className="insight-card">
+      <p className="eyebrow">Miles overview</p>
+      <div className="split-stat">
         <div>
-          <p className="eyebrow">Refund tracker</p>
-          <h3>Apple refund unresolved</h3>
+          <span>Redeemable</span>
+          <strong>72,000 miles</strong>
         </div>
-        <strong>Missing</strong>
+        <div>
+          <span>Next chunk</span>
+          <strong>S$184</strong>
+        </div>
       </div>
-      <ol>
-        {refundTimelineEvents.map((event) => (
-          <li key={event.label}>
-            <span>{event.label}</span>
-            <p>{event.value}</p>
+      <div className="progress-track" aria-label="72,000 of 82,000 miles">
+        <span style={{ width: "78%" }} />
+      </div>
+      <div className="card-callout">
+        <span>Best card now</span>
+        <strong>Citi Rewards</strong>
+        <p>Online Shopping (MCC 5812), 4 miles per S$1</p>
+      </div>
+    </section>
+  );
+}
+
+function ExpenseSnapshotCard() {
+  return (
+    <section className="insight-card">
+      <p className="eyebrow">Expense snapshot</p>
+      <h2>S$4,230</h2>
+      <div className="stacked-bar" aria-label="Expense category split">
+        {spendBreakdown.map((item) => (
+          <span key={item.label}>{item.value}</span>
+        ))}
+      </div>
+      <ul className="spend-list">
+        {spendBreakdown.map((item) => (
+          <li key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
           </li>
         ))}
-      </ol>
+      </ul>
     </section>
+  );
+}
+
+function CardsSurface({
+  plannerApplied,
+  onApplyPlanner,
+}: {
+  plannerApplied: boolean;
+  onApplyPlanner: () => void;
+}) {
+  const [savedPurchase, setSavedPurchase] = useState(false);
+
+  return (
+    <div className="secondary-surface">
+      <section className="insight-card wide">
+        <p className="eyebrow">Cards & miles</p>
+        <h2>72,000 redeemable miles</h2>
+        <div className="score-grid">
+          <article>
+            <span>Earned</span>
+            <strong>18,450</strong>
+          </article>
+          <article>
+            <span>Pending</span>
+            <strong>7,240</strong>
+          </article>
+          <article>
+            <span>Reversed</span>
+            <strong>-1,200</strong>
+          </article>
+          <article>
+            <span>Missed</span>
+            <strong>860</strong>
+          </article>
+        </div>
+      </section>
+
+      <section className="insight-card wide" aria-label="Plan a purchase">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Plan a purchase</p>
+            <h2>Haidilao, S$120, contactless</h2>
+          </div>
+          <button className="primary-action" onClick={() => setSavedPurchase(true)} type="button">
+            {savedPurchase ? "Saved" : "Save planned purchase"}
+          </button>
+        </div>
+        <ol className="ranked-cards">
+          <li>
+            <strong>HSBC Revolution</strong>
+            <span>480 miles, S$880 cap left</span>
+          </li>
+          <li>
+            <strong>UOB Lady's</strong>
+            <span>480 miles, dining category selected</span>
+          </li>
+          <li>
+            <strong>DBS Woman's World</strong>
+            <span>48 miles, offline spend warning</span>
+          </li>
+        </ol>
+      </section>
+
+      <section className="insight-card wide">
+        <p className="eyebrow">Recoverable leakage</p>
+        <h2>600 miles can still be fixed</h2>
+        <button className="primary-action" onClick={onApplyPlanner} type="button">
+          {plannerApplied ? "Planner synced" : "Apply to planner"}
+        </button>
+      </section>
+    </div>
+  );
+}
+
+function PlannerSurface({
+  preview,
+  plannerApplied,
+}: {
+  preview: ImpactPreview;
+  plannerApplied: boolean;
+}) {
+  return (
+    <div className="secondary-surface">
+      <section className="insight-card wide">
+        <p className="eyebrow">Planner</p>
+        <h2>{plannerApplied ? "Current month applied" : "Waiting for selected changes"}</h2>
+        <dl className="score-grid">
+          <div>
+            <dt>Monthly net spend</dt>
+            <dd>{formatSignedMoney(preview.monthlyNetSpendDeltaMinor)}</dd>
+          </div>
+          <div>
+            <dt>Annual expenses</dt>
+            <dd>{formatSignedMoney(preview.annualizedExpensesDeltaMinor)}</dd>
+          </div>
+          <div>
+            <dt>FI age</dt>
+            <dd>{preview.fiAgeDelta ?? "n/a"}</dd>
+          </div>
+          <div>
+            <dt>Miles</dt>
+            <dd>{preview.milesDelta}</dd>
+          </div>
+        </dl>
+      </section>
+      <CorrectionPanel />
+    </div>
+  );
+}
+
+function MobileShell({
+  activeTab,
+  setActiveTab,
+  plannerApplied,
+  onApplyPlanner,
+}: {
+  activeTab: MobileTab;
+  setActiveTab: (tab: MobileTab) => void;
+  plannerApplied: boolean;
+  onApplyPlanner: () => void;
+}) {
+  return (
+    <section className="mobile-shell" aria-label="Wander mobile app">
+      <header className="mobile-header">
+        <div>
+          <p className="eyebrow">Wander</p>
+          <h1>68% to financial independence</h1>
+        </div>
+        <span aria-label="Profile score">92</span>
+      </header>
+
+      <div className="mobile-content">
+        {activeTab === "home" && (
+          <MobileHome plannerApplied={plannerApplied} onApplyPlanner={onApplyPlanner} />
+        )}
+        {activeTab === "cards" && <MobileCards />}
+        {activeTab === "plan" && (
+          <MobilePlaceholder title="Plan" copy="Scenario impact is ready." />
+        )}
+        {activeTab === "transactions" && (
+          <MobilePlaceholder title="Transactions" copy="7 imported rows need a quick review." />
+        )}
+        {activeTab === "profile" && (
+          <MobilePlaceholder title="Profile" copy="Local data and card settings live here." />
+        )}
+      </div>
+
+      <nav className="bottom-tabs" aria-label="Mobile tabs">
+        {mobileTabs.map((tab) => (
+          <button
+            aria-current={activeTab === tab.id ? "page" : undefined}
+            className={activeTab === tab.id ? "active" : ""}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            type="button"
+          >
+            <span>{tab.shortLabel}</span>
+            {tab.badge ? <strong aria-label={`${tab.badge} pending`}>{tab.badge}</strong> : null}
+          </button>
+        ))}
+      </nav>
+    </section>
+  );
+}
+
+function MobileHome({
+  plannerApplied,
+  onApplyPlanner,
+}: {
+  plannerApplied: boolean;
+  onApplyPlanner: () => void;
+}) {
+  return (
+    <section className="mobile-panel">
+      <div className="mobile-score-card">
+        <span>FI progress</span>
+        <strong>68%</strong>
+        <div className="progress-track" aria-label="68 percent complete">
+          <span style={{ width: "68%" }} />
+        </div>
+        <p>Age 42 target, 8.2 years runway.</p>
+      </div>
+
+      <section className="mobile-actions" aria-label="Priority actions">
+        <button onClick={onApplyPlanner} type="button">
+          {plannerApplied ? "Planner updated" : "Apply this month to planner"}
+        </button>
+        <article>
+          <strong>Review 7 imported rows</strong>
+          <p>Refunds and low-confidence MCCs first.</p>
+        </article>
+        <article>
+          <strong>S$184 to next miles chunk</strong>
+          <p>Citi Rewards is best for the next online shop.</p>
+        </article>
+      </section>
+    </section>
+  );
+}
+
+function MobileCards() {
+  return (
+    <section className="mobile-panel">
+      <div className="mobile-score-card gold">
+        <span>Redeemable</span>
+        <strong>72,000 miles</strong>
+        <p>S$184 to next 10k transfer chunk.</p>
+      </div>
+      <article className="mobile-action-card">
+        <strong>Best card now: Citi Rewards</strong>
+        <p>Online Shopping, MCC 5812, 4 miles per S$1.</p>
+      </article>
+    </section>
+  );
+}
+
+function MobilePlaceholder({ title, copy }: { title: string; copy: string }) {
+  return (
+    <section className="mobile-panel">
+      <article className="mobile-action-card">
+        <h2>{title}</h2>
+        <p>{copy}</p>
+      </article>
+    </section>
+  );
+}
+
+function CorrectionPanel() {
+  const [field, setField] = useState<CorrectionField>("category");
+  const [nextValue, setNextValue] = useState("category_shopping");
+  const [createHeuristic, setCreateHeuristic] = useState(true);
+  const [message, setMessage] = useState("No correction saved yet.");
+  const triggerPreview = useMemo(
+    () =>
+      applyCorrectionDraft(sampleReviewTransaction, {
+        transactionId: sampleReviewTransaction.id,
+        field,
+        nextValue: field === "miles_eligibility" ? nextValue === "true" : nextValue,
+        createHeuristic,
+        correctedAt: "2026-06-26T00:00:00.000Z",
+      }),
+    [createHeuristic, field, nextValue],
+  );
+
+  return (
+    <form
+      className="correction-panel"
+      onSubmit={(event) => {
+        event.preventDefault();
+        setMessage(
+          `Saved ${triggerPreview.correction.field} correction; triggers ${triggerPreview.recalculationTriggers.join(", ")}.`,
+        );
+      }}
+    >
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Correction loop</p>
+          <h2>Teach future imports</h2>
+        </div>
+        <button className="primary-action" type="submit">
+          Save correction
+        </button>
+      </div>
+      <div className="form-grid">
+        <label>
+          Correction
+          <select
+            aria-label="Correction"
+            onChange={(event) => {
+              const selectedField = event.target.value as CorrectionField;
+              setField(selectedField);
+              setNextValue(selectedField === "miles_eligibility" ? "false" : "category_shopping");
+            }}
+            value={field}
+          >
+            {correctionFields.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          New value
+          <input
+            aria-label="New value"
+            onChange={(event) => setNextValue(event.target.value)}
+            value={nextValue}
+          />
+        </label>
+        <label className="checkbox-field">
+          <input
+            checked={createHeuristic}
+            onChange={(event) => setCreateHeuristic(event.target.checked)}
+            type="checkbox"
+          />
+          Create future rule
+        </label>
+      </div>
+      <p aria-live="polite">{message}</p>
+    </form>
   );
 }
 
@@ -427,490 +730,32 @@ function WhyThisDrawer({ onClose }: { onClose: () => void }) {
     <aside className="why-drawer" aria-label="Why this explanation">
       <div>
         <p className="eyebrow">Why this?</p>
-        <h2>Medium trust</h2>
+        <h2>Refund reversal</h2>
         <p>
-          Parser confidence, merchant match, MCC confidence, and reconciliation status were used.
+          Merchant alias, MCC 5812, equal opposite amount, and adjacent statement date linked the
+          refund to the original Shopee charge.
         </p>
       </div>
       <dl>
         <div>
           <dt>Rules fired</dt>
-          <dd>trust_score · merchant_resolver</dd>
+          <dd>refund_matcher, trust_score, reward_reversal</dd>
         </div>
         <div>
           <dt>Caveats</dt>
-          <dd>Statement balances unavailable for this import.</dd>
-        </div>
-        <div>
-          <dt>Linked records</dt>
-          <dd>transaction_sp_services</dd>
+          <dd>Statement balances were unavailable, so reconciliation confidence is capped.</dd>
         </div>
       </dl>
-      <button onClick={onClose} type="button">
+      <button className="primary-action" onClick={onClose} type="button">
         Close
       </button>
     </aside>
   );
 }
 
-function CorrectionPanel() {
-  const [field, setField] = useState<CorrectionField>("category");
-  const [nextValue, setNextValue] = useState("category_utilities");
-  const [createHeuristic, setCreateHeuristic] = useState(true);
-  const [message, setMessage] = useState("No correction saved yet.");
-
-  return (
-    <form
-      className="correction-panel"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const result = applyCorrectionDraft(sampleReviewTransaction, {
-          transactionId: sampleReviewTransaction.id,
-          field,
-          nextValue: field === "miles_eligibility" ? nextValue === "true" : nextValue,
-          createHeuristic,
-          correctedAt: "2026-06-26T00:00:00.000Z",
-        });
-
-        setMessage(
-          `Saved ${result.correction.field} correction; triggers ${result.recalculationTriggers.join(", ")}.`,
-        );
-      }}
-    >
-      <div>
-        <label htmlFor="correction-field">Correction</label>
-        <select
-          id="correction-field"
-          onChange={(event) => {
-            const selectedField = event.target.value as CorrectionField;
-            setField(selectedField);
-            setNextValue(
-              selectedField === "miles_eligibility"
-                ? "false"
-                : defaultCorrectionValue(selectedField),
-            );
-          }}
-          value={field}
-        >
-          {correctionFields.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label htmlFor="correction-value">New value</label>
-        <input
-          id="correction-value"
-          onChange={(event) => setNextValue(event.target.value)}
-          value={nextValue}
-        />
-      </div>
-      <label className="checkbox-field">
-        <input
-          checked={createHeuristic}
-          onChange={(event) => setCreateHeuristic(event.target.checked)}
-          type="checkbox"
-        />
-        Create heuristic
-      </label>
-      <button type="submit">Save correction</button>
-      <p aria-live="polite">{message}</p>
-    </form>
-  );
-}
-
-function HomePanel() {
-  return (
-    <section className="mobile-panel" aria-labelledby="home-title">
-      <div className="fire-hero">
-        <p className="eyebrow">FIRE progress</p>
-        <h2 id="home-title">49%</h2>
-        <p>On track for FI at 45 if imported expenses stay near the latest net-spend snapshot.</p>
-      </div>
-
-      <div className="metric-strip" aria-label="FIRE summary">
-        {homeMetrics.map((metric) => (
-          <article key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-function MobileHome() {
-  return (
-    <article className="screen-panel mobile-home">
-      <header>
-        <p className="eyebrow">FIRE Progress</p>
-        <div className="fire-score">
-          <span>68%</span>
-          <p>to FI target</p>
-        </div>
-      </header>
-
-      <section className="corpus-card" aria-label="Corpus progress">
-        <div>
-          <span>Target corpus</span>
-          <strong>$1.1m / $1.62m</strong>
-        </div>
-        <div className="progress-track" aria-label="68 percent complete">
-          <span style={{ width: "68%" }} />
-        </div>
-        <p>Estimated FI date: Aug 2034 · Runway: 8.2 years</p>
-      </section>
-
-      <section className="metric-grid" aria-label="Financial summary">
-        {homeMetrics.map((metric) => (
-          <article className="metric-card" key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <p>{metric.detail}</p>
-          </article>
-        ))}
-      </div>
-
-      <section className="action-list" aria-label="Priority actions">
-        <ImportQualityCard />
-        <ActionRow
-          label="Confirm May expense snapshot"
-          detail="S$5.4K monthly net spend"
-          tone="warning"
-        />
-        <ActionRow
-          label="Review 3 merchant matches"
-          detail="MCC confidence below 80%"
-          tone="progress"
-        />
-        <ActionRow
-          label="Next miles transfer chunk"
-          detail="S$50 spend to DBS block"
-          tone="success"
-        />
-      </section>
-    </section>
-  );
-}
-
-function ImportQualityCard() {
-  return (
-    <article className="import-quality">
-      <div>
-        <h3>Latest import mostly verified</h3>
-        <p>42 rows checked · statement balances unavailable</p>
-      </div>
-      <strong>86%</strong>
-    </article>
-  );
-}
-
-function CardsPanel() {
-  return (
-    <section className="mobile-panel" aria-labelledby="cards-title">
-      <div className="panel-heading">
-        <p className="eyebrow">Cards</p>
-        <h2 id="cards-title">Miles runway</h2>
-        <p>Redeemable miles, pending earns, reversals, and next transfer chunks.</p>
-      </div>
-
-      <div className="metric-strip cards" aria-label="Miles summary">
-        {cardMetrics.map((metric) => (
-          <article className={metric.tone} key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-          </article>
-        ))}
-      </div>
-
-      <MilesLeakageCard />
-      <CardPlannerPanel />
-
-      <section className="card-stack" aria-label="Card recommendations">
-        <article>
-          <div>
-            <h3>DBS Woman's World</h3>
-            <p>S$50 to next 5,000-point block</p>
-          </div>
-          <strong>4 mpd</strong>
-        </article>
-        <article>
-          <div>
-            <h3>UOB Lady's</h3>
-            <p>Dining category selected, S$740 cap left</p>
-          </div>
-          <strong>4 mpd</strong>
-        </article>
-      </section>
-    </section>
-  );
-}
-
-function MilesLeakageCard() {
-  return (
-    <section className="leakage-card" aria-label="Miles leakage monitor">
-      <div>
-        <p className="eyebrow">Leakage monitor</p>
-        <h3>860 missed miles this month</h3>
-        <p>Recoverable actions exclude refunded spend and confirmed excluded MCCs.</p>
-      </div>
-      <dl>
-        <div>
-          <dt>Cap used</dt>
-          <dd>74%</dd>
-        </div>
-        <div>
-          <dt>Excluded spend</dt>
-          <dd>S$312</dd>
-        </div>
-        <div>
-          <dt>Recoverable</dt>
-          <dd>600 mi</dd>
-        </div>
-      </dl>
-      <ul>
-        {leakageReasons.map((reason) => (
-          <li key={reason.label}>
-            <span>{reason.label}</span>
-            <strong>{reason.value}</strong>
-            <p>{reason.action}</p>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function CardPlannerPanel() {
-  return (
-    <section className="card-planner" aria-label="Plan a purchase">
-      <div>
-        <p className="eyebrow">Plan a purchase</p>
-        <h3>Haidilao · S$120 · contactless</h3>
-        <p>Ranked cards show expected miles, cap context, and caveats before the purchase.</p>
-      </div>
-      <ol>
-        {cardPlannerResults.map((result) => (
-          <li key={result.card}>
-            <span>{result.card}</span>
-            <strong>{result.miles}</strong>
-            <p>{result.caveat}</p>
-          </li>
-        ))}
-      </ol>
-      <button type="button">Save planned purchase</button>
-    </section>
-  );
-}
-
-function EmptyPanel({ title, copy }: { title: string; copy: string }) {
-  return (
-    <section className="mobile-panel empty-panel" aria-labelledby={`${title}-title`}>
-      <p className="eyebrow">Coming next</p>
-      <h2 id={`${title}-title`}>{title}</h2>
-      <p>{copy}</p>
-    </section>
-  );
-}
-
-function ActionRow({
-  label,
-  detail,
-  tone,
-}: {
-  label: string;
-  detail: string;
-  tone: "success" | "warning" | "progress";
-}) {
-  return (
-    <article className={tone}>
-      <div>
-        <h3>{label}</h3>
-        <p>{detail}</p>
-      </div>
-      <span aria-hidden="true">›</span>
-    </article>
-  );
-}
-
-function ReviewRow({
-  title,
-  meta,
-  impact,
-  diagnostic,
-  onExplain,
-  trustLabel,
-  tone,
-}: {
-  title: string;
-  meta: string;
-  impact: string;
-  diagnostic: string;
-  onExplain: () => void;
-  trustLabel: string;
-  tone: "success" | "warning" | "progress";
-}) {
-  return (
-    <article className={`review-row ${tone}`}>
-      <div>
-        <h3>{title}</h3>
-        <p>{meta}</p>
-        <span className="trust-badge">{trustLabel}</span>
-        <span>{diagnostic}</span>
-        <button className="why-link" onClick={onExplain} type="button">
-          Why this?
-        </button>
-      </div>
-      <strong>{impact}</strong>
-    </article>
-  );
-}
-
-function defaultCorrectionValue(field: CorrectionField) {
-  switch (field) {
-    case "category":
-      return "category_utilities";
-    case "merchant":
-      return "merchant_sp_services";
-    case "mcc":
-      return "4900";
-    case "card":
-      return "card_citi_rewards";
-    case "refund_match":
-      return "transaction_purchase";
-    case "miles_eligibility":
-      return "false";
-  }
-}
-
-function formatSignedMoney(valueMinor: number) {
-  const sign = valueMinor > 0 ? "+" : "-";
-  return `${sign}S$${Math.abs(valueMinor / 100).toLocaleString("en-SG", {
+function formatSignedMoney(amountMinor: number): string {
+  const sign = amountMinor > 0 ? "+" : amountMinor < 0 ? "-" : "";
+  return `${sign}S$${Math.abs(amountMinor / 100).toLocaleString("en-SG", {
     maximumFractionDigits: 0,
   })}`;
 }
-      <button className="primary-action" type="button">
-        Review 7 imported rows
-      </button>
-    </article>
-  );
-}
-
-function CardsTab() {
-  return (
-    <article className="screen-panel cards-tab">
-      <header>
-        <p className="eyebrow">Miles Vault</p>
-        <h2>72,000 redeemable miles</h2>
-        <p>14,400 pending · 1,032 reversed · rule check due in 12 days</p>
-      </header>
-
-      <section className="chunk-card" aria-label="Spend to next redeemable chunk">
-        <span>Next redeemable chunk</span>
-        <strong>$430 eligible spend</strong>
-        <p>Use DBS Woman's World for online travel until the monthly cap is full.</p>
-      </section>
-
-      <section className="activity-list" aria-label="Recent miles activity">
-        {reviewRows.slice(0, 2).map((row) => (
-          <article key={row.merchant}>
-            <div>
-              <strong>{row.merchant}</strong>
-              <p>
-                {row.status} · {row.confidence}
-              </p>
-            </div>
-            <span>{row.impact}</span>
-          </article>
-        ))}
-      </section>
-    </article>
-  );
-}
-
-function DesktopDashboard({ activeSurface }: { activeSurface: string }) {
-  return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <div>
-          <p className="eyebrow">Epic 2 Preview</p>
-          <h2>{surfaceLabels[activeSurface as keyof typeof surfaceLabels]}</h2>
-        </div>
-        <button className="primary-action compact" type="button">
-          Apply snapshot
-        </button>
-      </header>
-
-      <section className="kpi-row" aria-label="Key planning metrics">
-        <Kpi label="FI Progress" value="68%" trend="+1.2%" />
-        <Kpi label="Net Spend" value="$4.2k" trend="-$620" />
-        <Kpi label="Redeemable Miles" value="72k" trend="+3.4k" />
-      </section>
-
-      <section className="desktop-grid">
-        <article className="review-inbox" aria-labelledby="review-title">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Review Inbox</p>
-              <h3 id="review-title">7 rows need attention</h3>
-            </div>
-            <button type="button">Filter</button>
-          </div>
-
-          <div className="review-table" role="table" aria-label="Imported transaction review">
-            {reviewRows.map((row) => (
-              <div className="review-row" role="row" key={row.merchant}>
-                <div role="cell">
-                  <strong>{row.merchant}</strong>
-                  <p>{row.amount}</p>
-                </div>
-                <span className="status-pill" role="cell">
-                  {row.status}
-                </span>
-                <span role="cell">{row.confidence}</span>
-                <strong role="cell">{row.impact}</strong>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <aside className="insight-column" aria-label="Planning insights">
-          <InsightCard title="FI impact" value="Expense snapshot lowers FI date by 3 months." />
-          <InsightCard title="Miles overview" value="Refund reversals are netted from accumulated miles." />
-          <InsightCard title="Expense snapshot" value="$50.4k annualized from latest import." />
-        </aside>
-      </section>
-    </div>
-  );
-}
-
-function Kpi({ label, value, trend }: { label: string; value: string; trend: string }) {
-  return (
-    <article className="kpi-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <p>{trend}</p>
-    </article>
-  );
-}
-
-function InsightCard({ title, value }: { title: string; value: string }) {
-  return (
-    <article className="insight-card">
-      <span>{title}</span>
-      <p>{value}</p>
-    </article>
-  );
-}
-
-function PlaceholderPanel({ title, copy }: { title: string; copy: string }) {
-  return (
-    <article className="screen-panel placeholder-panel">
-      <p className="eyebrow">{title}</p>
-      <h2>{title}</h2>
-      <p>{copy}</p>
-    </article>
-  );
-}
-
-const surfaceLabels = {
-  home: "Mobile Home",
-  cards: "Cards And Miles",
-  desktop: "Desktop Dashboard",
-} as const;
