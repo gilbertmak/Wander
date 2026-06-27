@@ -3,6 +3,16 @@ import { useMemo, useState } from "react";
 import { applyCorrectionDraft, type CorrectionField } from "../review/correctionWorkflow";
 import { calculateImpactPreview, type ImpactPreview } from "../review/impactPreview";
 import type { ReviewTransaction } from "../review/reviewInboxModel";
+import {
+  answerOnboardingQuestion,
+  buildPlannerSetupReview,
+  calculateOnboardingProgress,
+  completeCurrentSection,
+  createInitialOnboardingState,
+  getCurrentSection,
+  skipCurrentSection,
+  type OnboardingQuestion,
+} from "../onboarding/wanderGuide";
 import { useAppShellStore, type MobileTab, type ProductSurface } from "../state/appShellStore";
 
 const mobileTabs: Array<{ id: MobileTab; label: string; shortLabel: string; badge?: string }> = [
@@ -15,6 +25,7 @@ const mobileTabs: Array<{ id: MobileTab; label: string; shortLabel: string; badg
 
 const surfaceLabels: Record<ProductSurface, string> = {
   home: "Dashboard",
+  onboarding: "Setup",
   cards: "Cards & miles",
   desktop: "Planner",
 };
@@ -152,6 +163,7 @@ export function App() {
   const setActiveTab = useAppShellStore((state) => state.setActiveTab);
   const activeSurface = useAppShellStore((state) => state.activeSurface);
   const setActiveSurface = useAppShellStore((state) => state.setActiveSurface);
+  const [onboardingState, setOnboardingState] = useState(createInitialOnboardingState);
   const [plannerApplied, setPlannerApplied] = useState(false);
   const [reviewCompleted, setReviewCompleted] = useState(false);
   const [whyOpen, setWhyOpen] = useState(false);
@@ -166,6 +178,8 @@ export function App() {
         plannerApplied={plannerApplied}
         reviewCompleted={reviewCompleted}
         setActiveSurface={setActiveSurface}
+        onboardingState={onboardingState}
+        setOnboardingState={setOnboardingState}
       />
       <MobileShell
         activeTab={activeTab}
@@ -186,6 +200,8 @@ function DesktopShell({
   onApplyPlanner,
   onReviewAll,
   onExplain,
+  onboardingState,
+  setOnboardingState,
 }: {
   activeSurface: ProductSurface;
   setActiveSurface: (surface: ProductSurface) => void;
@@ -194,6 +210,8 @@ function DesktopShell({
   onApplyPlanner: () => void;
   onReviewAll: () => void;
   onExplain: () => void;
+  onboardingState: ReturnType<typeof createInitialOnboardingState>;
+  setOnboardingState: (state: ReturnType<typeof createInitialOnboardingState>) => void;
 }) {
   return (
     <section className="desktop-shell" aria-label="Wander desktop app">
@@ -232,11 +250,18 @@ function DesktopShell({
 
         {activeSurface === "home" && (
           <DashboardSurface
+            onStartSetup={() => setActiveSurface("onboarding")}
             onApplyPlanner={onApplyPlanner}
             onExplain={onExplain}
             onReviewAll={onReviewAll}
             plannerApplied={plannerApplied}
             reviewCompleted={reviewCompleted}
+          />
+        )}
+        {activeSurface === "onboarding" && (
+          <WanderGuideOnboarding
+            onboardingState={onboardingState}
+            setOnboardingState={setOnboardingState}
           />
         )}
         {activeSurface === "cards" && (
@@ -253,12 +278,14 @@ function DesktopShell({
 function DashboardSurface({
   plannerApplied,
   reviewCompleted,
+  onStartSetup,
   onApplyPlanner,
   onReviewAll,
   onExplain,
 }: {
   plannerApplied: boolean;
   reviewCompleted: boolean;
+  onStartSetup: () => void;
   onApplyPlanner: () => void;
   onReviewAll: () => void;
   onExplain: () => void;
@@ -338,10 +365,192 @@ function DashboardSurface({
       </section>
 
       <aside className="insight-column" aria-label="Insights">
+        <WanderGuideCard onStartSetup={onStartSetup} />
         <FiImpactCard onApplyPlanner={onApplyPlanner} plannerApplied={plannerApplied} />
         <MilesOverviewCard />
         <ExpenseSnapshotCard />
       </aside>
+    </div>
+  );
+}
+
+function WanderGuideCard({ onStartSetup }: { onStartSetup: () => void }) {
+  return (
+    <section className="insight-card wander-guide-card">
+      <div className="guide-orb small" aria-hidden="true">
+        <span />
+      </div>
+      <p className="eyebrow">Wander Guide</p>
+      <h2>Build your FIRE profile</h2>
+      <p>
+        Answer guided question bundles for timeline, assets, CPF, goals, and risk comfort. Voice and
+        cloud AI stay out until the final release step.
+      </p>
+      <button className="primary-action full" onClick={onStartSetup} type="button">
+        Start guided setup
+      </button>
+    </section>
+  );
+}
+
+function WanderGuideOnboarding({
+  onboardingState,
+  setOnboardingState,
+}: {
+  onboardingState: ReturnType<typeof createInitialOnboardingState>;
+  setOnboardingState: (state: ReturnType<typeof createInitialOnboardingState>) => void;
+}) {
+  const section = getCurrentSection(onboardingState);
+  const progress = calculateOnboardingProgress(onboardingState);
+  const review = buildPlannerSetupReview(onboardingState);
+
+  return (
+    <section className="onboarding-surface" aria-labelledby="onboarding-title">
+      <aside className="guide-panel">
+        <div className="guide-orb thinking" aria-hidden="true">
+          <span />
+        </div>
+        <p className="eyebrow">Relational setup</p>
+        <h2 id="onboarding-title">Wander Guide</h2>
+        <p>{section.guidePrompt}</p>
+        <div className="guide-progress" aria-label="Onboarding progress">
+          <span>
+            Step {progress.completedSections + 1} of {progress.totalSections}
+          </span>
+          <strong>{Math.round(progress.confidenceScore * 100)}% confidence</strong>
+        </div>
+      </aside>
+
+      <section className="question-card" aria-labelledby="question-card-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Guided setup</p>
+            <h2 id="question-card-title">{section.title}</h2>
+          </div>
+          <span>
+            {progress.requiredAnswered}/{progress.requiredTotal} required
+          </span>
+        </div>
+
+        {section.id === "preview" ? (
+          <PlannerSetupReviewCard review={review} />
+        ) : (
+          <div className="question-grid">
+            {section.questions.map((question) => (
+              <OnboardingQuestionField
+                key={question.id}
+                onChange={(value) =>
+                  setOnboardingState(answerOnboardingQuestion(onboardingState, question.id, value))
+                }
+                question={question}
+                value={onboardingState.answers[question.id]}
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="onboarding-actions">
+          {section.id !== "preview" && (
+            <button
+              className="secondary-action"
+              onClick={() => setOnboardingState(skipCurrentSection(onboardingState))}
+              type="button"
+            >
+              Skip for now
+            </button>
+          )}
+          <button
+            className="primary-action"
+            onClick={() => setOnboardingState(completeCurrentSection(onboardingState))}
+            type="button"
+          >
+            {section.id === "preview" ? "Review complete" : "Continue"}
+          </button>
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function OnboardingQuestionField({
+  question,
+  value,
+  onChange,
+}: {
+  question: OnboardingQuestion;
+  value: string | number | undefined;
+  onChange: (value: string | number) => void;
+}) {
+  return (
+    <label className="question-field">
+      <span>
+        {question.label}
+        {question.required ? " *" : ""}
+      </span>
+      {question.type === "select" ? (
+        <select
+          aria-label={question.label}
+          onChange={(event) => onChange(event.target.value)}
+          value={value ?? ""}
+        >
+          <option value="">Choose one</option>
+          {question.options?.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          aria-label={question.label}
+          inputMode={question.type === "text" ? "text" : "decimal"}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={question.type === "money" ? "SGD amount" : undefined}
+          type={question.type === "text" ? "text" : "number"}
+          value={value ?? ""}
+        />
+      )}
+      <small>{question.helper}</small>
+      <button className="why-link" type="button">
+        Why am I being asked this?
+      </button>
+    </label>
+  );
+}
+
+function PlannerSetupReviewCard({
+  review,
+}: {
+  review: ReturnType<typeof buildPlannerSetupReview>;
+}) {
+  return (
+    <div className="planner-review-card">
+      <h3>Structured plan preview</h3>
+      <dl>
+        <div>
+          <dt>Timeline</dt>
+          <dd>
+            Age {review.timeline.currentAge ?? "?"} to {review.timeline.targetRetirementAge ?? "?"}
+          </dd>
+        </div>
+        <div>
+          <dt>Annual income</dt>
+          <dd>{formatMinor(review.annualIncomeMinor)}</dd>
+        </div>
+        <div>
+          <dt>Monthly savings</dt>
+          <dd>{formatMinor(review.monthlySavingsMinor)}</dd>
+        </div>
+        <div>
+          <dt>CPF total</dt>
+          <dd>{formatMinor(review.cpfTotalMinor)}</dd>
+        </div>
+      </dl>
+      {review.missingRequiredQuestionIds.length > 0 ? (
+        <p>{review.missingRequiredQuestionIds.length} required answers still need review.</p>
+      ) : (
+        <p>Ready to save into the planner model after final confirmation.</p>
+      )}
     </div>
   );
 }
@@ -756,6 +965,14 @@ function WhyThisDrawer({ onClose }: { onClose: () => void }) {
 function formatSignedMoney(amountMinor: number): string {
   const sign = amountMinor > 0 ? "+" : amountMinor < 0 ? "-" : "";
   return `${sign}S$${Math.abs(amountMinor / 100).toLocaleString("en-SG", {
+    maximumFractionDigits: 0,
+  })}`;
+}
+
+function formatMinor(amountMinor: number | undefined): string {
+  if (amountMinor === undefined) return "Not provided";
+
+  return `S$${(amountMinor / 100).toLocaleString("en-SG", {
     maximumFractionDigits: 0,
   })}`;
 }

@@ -2283,8 +2283,85 @@
         "Required fields are present for every eval.",
         "Automation layers are classified as executable or external/manual gates."
       ],
+      "passCriteria": ["Eval manifest tests and npm run evals complete successfully."]
+    },
+    {
+      "id": "R3-ONBOARDING-001",
+      "area": "relational-onboarding",
+      "priority": "high",
+      "requirementRefs": ["REQ-FIRE-002", "R3-1"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-test",
+      "scenario": "Wander Guide asks bundled onboarding questions and converts answers into structured planner setup review data.",
+      "input": {
+        "sections": [
+          "timeline",
+          "fire_life",
+          "money_today",
+          "monthly_engine",
+          "cpf",
+          "property",
+          "healthcare",
+          "goals",
+          "risk",
+          "preview"
+        ],
+        "commands": [
+          "npm test -- tests/onboarding/wanderGuide.test.ts tests/App.test.tsx",
+          "npm run test:e2e"
+        ]
+      },
+      "expected": [
+        "The first section asks current age, target retirement age, and planning age together.",
+        "The setup surface shows Wander Guide, progress, confidence, and a question bundle.",
+        "Required answers increase onboarding confidence.",
+        "Final preview maps answers to structured planner setup values before persistence."
+      ],
       "passCriteria": [
-        "Eval manifest tests and npm run evals complete successfully."
+        "Onboarding unit tests pass.",
+        "App component tests verify the Setup flow advances from timeline to FIRE life.",
+        "Playwright verifies the desktop Setup flow opens and advances in browser."
+      ]
+    },
+    {
+      "id": "R3-DB-001",
+      "area": "planner-data-model",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-DB-002", "R3-3"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "migration-test",
+      "scenario": "Release 3 planner model tables migrate cleanly and participate in local export/import.",
+      "input": {
+        "tables": [
+          "income_streams",
+          "asset_liability_accounts",
+          "cpf_accounts",
+          "property_profiles",
+          "healthcare_assumptions",
+          "financial_goals",
+          "projection_runs",
+          "projection_years",
+          "advisor_insights"
+        ],
+        "commands": [
+          "npm test -- tests/db/database.test.ts tests/db/exportImport.test.ts",
+          "npm run db:migrate"
+        ]
+      },
+      "expected": [
+        "Migration 0008 creates advisor-grade planner input and output tables.",
+        "Repositories can create and list records for every new table.",
+        "Export artifacts include every new table.",
+        "Import restores every new table without source statement files."
+      ],
+      "passCriteria": [
+        "Database tests pass after a clean migration.",
+        "Export/import tests confirm imported table count and restored R3 records.",
+        "Temporary migration command applies through 0008."
       ]
     },
     {

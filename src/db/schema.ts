@@ -33,6 +33,51 @@ export const milesLeakageReasonValues = [
   "missing_card_assignment",
 ] as const;
 export const plannedPurchaseStatusValues = ["planned", "matched", "cancelled"] as const;
+export const incomeTypeValues = [
+  "salary",
+  "bonus",
+  "business",
+  "rental",
+  "dividend",
+  "cpf_life",
+  "other",
+] as const;
+export const accountKindValues = ["asset", "liability"] as const;
+export const assetClassValues = [
+  "cash",
+  "brokerage",
+  "cpf",
+  "srs",
+  "property",
+  "debt",
+  "other",
+] as const;
+export const liquidityValues = ["liquid", "locked", "illiquid"] as const;
+export const propertyTypeValues = ["hdb", "condo", "landed", "investment", "other"] as const;
+export const goalTypeValues = [
+  "emergency_fund",
+  "home",
+  "education",
+  "car",
+  "wedding",
+  "travel",
+  "parent_support",
+  "custom",
+] as const;
+export const goalStatusValues = ["active", "funded", "paused", "dismissed"] as const;
+export const projectionRunTypeValues = ["baseline", "scenario", "stress", "monte_carlo"] as const;
+export const advisorInsightTypeValues = [
+  "on_track",
+  "savings_gap",
+  "expense_drift",
+  "cpf_shortfall",
+  "goal_conflict",
+  "sequence_risk",
+  "emergency_reserve",
+  "retirement_spending_risk",
+] as const;
+export const advisorSeverityValues = ["info", "warning", "critical"] as const;
+export const advisorInsightStatusValues = ["open", "dismissed", "applied"] as const;
 
 const now = sql`CURRENT_TIMESTAMP`;
 
@@ -556,6 +601,213 @@ export const plannedPurchases = sqliteTable(
   ],
 );
 
+export const incomeStreams = sqliteTable(
+  "income_streams",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    incomeType: text("income_type").notNull(),
+    annualAmountMinor: integer("annual_amount_minor").notNull(),
+    annualBonusMinor: integer("annual_bonus_minor").notNull().default(0),
+    growthRateBasisPoints: integer("growth_rate_basis_points").notNull().default(0),
+    startsAt: text("starts_at"),
+    endsAt: text("ends_at"),
+    source: text("source").notNull().default("user_input"),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [index("income_streams_profile_type_idx").on(table.profileId, table.incomeType)],
+);
+
+export const assetLiabilityAccounts = sqliteTable(
+  "asset_liability_accounts",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    accountLabel: text("account_label").notNull(),
+    accountKind: text("account_kind").notNull(),
+    assetClass: text("asset_class").notNull(),
+    balanceMinor: integer("balance_minor").notNull(),
+    currency: text("currency").notNull().default("SGD"),
+    expectedReturnBasisPoints: integer("expected_return_basis_points").notNull().default(0),
+    liquidity: text("liquidity").notNull(),
+    source: text("source").notNull().default("user_input"),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [
+    index("asset_liability_accounts_profile_class_idx").on(table.profileId, table.assetClass),
+  ],
+);
+
+export const cpfAccounts = sqliteTable(
+  "cpf_accounts",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    oaBalanceMinor: integer("oa_balance_minor").notNull().default(0),
+    saBalanceMinor: integer("sa_balance_minor").notNull().default(0),
+    maBalanceMinor: integer("ma_balance_minor").notNull().default(0),
+    raBalanceMinor: integer("ra_balance_minor").notNull().default(0),
+    asOfDate: text("as_of_date").notNull(),
+    source: text("source").notNull().default("user_input"),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [index("cpf_accounts_profile_date_idx").on(table.profileId, table.asOfDate)],
+);
+
+export const propertyProfiles = sqliteTable(
+  "property_profiles",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    propertyType: text("property_type").notNull(),
+    estimatedValueMinor: integer("estimated_value_minor").notNull(),
+    outstandingMortgageMinor: integer("outstanding_mortgage_minor").notNull().default(0),
+    monthlyPaymentMinor: integer("monthly_payment_minor").notNull().default(0),
+    annualRentalIncomeMinor: integer("annual_rental_income_minor").notNull().default(0),
+    leaseEndYear: integer("lease_end_year"),
+    isPrimaryResidence: integer("is_primary_residence", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [index("property_profiles_profile_type_idx").on(table.profileId, table.propertyType)],
+);
+
+export const healthcareAssumptions = sqliteTable(
+  "healthcare_assumptions",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    annualPremiumMinor: integer("annual_premium_minor").notNull().default(0),
+    annualOutOfPocketMinor: integer("annual_out_of_pocket_minor").notNull().default(0),
+    medisaveUseMinor: integer("medisave_use_minor").notNull().default(0),
+    escalationRateBasisPoints: integer("escalation_rate_basis_points").notNull().default(0),
+    source: text("source").notNull().default("user_input"),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [index("healthcare_assumptions_profile_idx").on(table.profileId)],
+);
+
+export const financialGoals = sqliteTable(
+  "financial_goals",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    goalType: text("goal_type").notNull(),
+    label: text("label").notNull(),
+    targetAmountMinor: integer("target_amount_minor").notNull(),
+    currentAmountMinor: integer("current_amount_minor").notNull().default(0),
+    targetDate: text("target_date"),
+    priority: integer("priority").notNull().default(3),
+    fundingSource: text("funding_source").notNull().default("cash"),
+    inflationAdjusted: integer("inflation_adjusted", { mode: "boolean" }).notNull().default(true),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [
+    index("financial_goals_profile_status_idx").on(table.profileId, table.status),
+    index("financial_goals_profile_priority_idx").on(table.profileId, table.priority),
+  ],
+);
+
+export const projectionRuns = sqliteTable(
+  "projection_runs",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    scenarioId: text("scenario_id"),
+    runType: text("run_type").notNull(),
+    inputHash: text("input_hash").notNull(),
+    assumptionsJson: text("assumptions_json").notNull().default("{}"),
+    resultSummaryJson: text("result_summary_json").notNull().default("{}"),
+    confidenceScore: real("confidence_score").notNull().default(0),
+    calculatedAt: text("calculated_at").notNull(),
+    createdAt: text("created_at").notNull().default(now),
+  },
+  (table) => [
+    index("projection_runs_profile_type_idx").on(table.profileId, table.runType),
+    index("projection_runs_profile_calculated_idx").on(table.profileId, table.calculatedAt),
+  ],
+);
+
+export const projectionYears = sqliteTable(
+  "projection_years",
+  {
+    id: text("id").primaryKey(),
+    projectionRunId: text("projection_run_id")
+      .notNull()
+      .references(() => projectionRuns.id, { onDelete: "cascade" }),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    yearIndex: integer("year_index").notNull(),
+    calendarYear: integer("calendar_year").notNull(),
+    age: integer("age").notNull(),
+    liquidAssetsMinor: integer("liquid_assets_minor").notNull(),
+    cpfBalanceMinor: integer("cpf_balance_minor").notNull(),
+    propertyEquityMinor: integer("property_equity_minor").notNull(),
+    annualIncomeMinor: integer("annual_income_minor").notNull(),
+    annualExpensesMinor: integer("annual_expenses_minor").notNull(),
+    annualSavingsMinor: integer("annual_savings_minor").notNull(),
+    fireTargetMinor: integer("fire_target_minor").notNull(),
+    fireProgressBasisPoints: integer("fire_progress_basis_points").notNull(),
+    eventJson: text("event_json").notNull().default("[]"),
+    createdAt: text("created_at").notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("projection_years_run_year_unique").on(table.projectionRunId, table.yearIndex),
+    index("projection_years_profile_age_idx").on(table.profileId, table.age),
+  ],
+);
+
+export const advisorInsights = sqliteTable(
+  "advisor_insights",
+  {
+    id: text("id").primaryKey(),
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    projectionRunId: text("projection_run_id").references(() => projectionRuns.id, {
+      onDelete: "set null",
+    }),
+    insightType: text("insight_type").notNull(),
+    severity: text("severity").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    recommendedAction: text("recommended_action").notNull(),
+    confidenceScore: real("confidence_score").notNull(),
+    traceId: text("trace_id").references(() => decisionTraces.id, { onDelete: "set null" }),
+    status: text("status").notNull().default("open"),
+    createdAt: text("created_at").notNull().default(now),
+    updatedAt: text("updated_at").notNull().default(now),
+  },
+  (table) => [
+    index("advisor_insights_profile_status_idx").on(table.profileId, table.status),
+    index("advisor_insights_profile_type_idx").on(table.profileId, table.insightType),
+  ],
+);
+
 export const rewardLedger = sqliteTable(
   "reward_ledger",
   {
@@ -620,7 +872,16 @@ export const profileRelations = relations(profiles, ({ many, one }) => ({
   expenseSnapshots: many(expenseSnapshots),
   statementImports: many(statementImports),
   accounts: many(accounts),
+  advisorInsights: many(advisorInsights),
+  assetLiabilityAccounts: many(assetLiabilityAccounts),
+  cpfAccounts: many(cpfAccounts),
   transactions: many(transactions),
+  financialGoals: many(financialGoals),
+  healthcareAssumptions: many(healthcareAssumptions),
+  incomeStreams: many(incomeStreams),
+  propertyProfiles: many(propertyProfiles),
+  projectionRuns: many(projectionRuns),
+  projectionYears: many(projectionYears),
   statementReconciliations: many(statementReconciliations),
   transactionTrustScores: many(transactionTrustScores),
   decisionTraces: many(decisionTraces),

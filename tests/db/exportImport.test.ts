@@ -37,6 +37,7 @@ describe("local data export and import", () => {
       "0005",
       "0006",
       "0007",
+      "0008",
     ]);
     expect(artifact.data.profiles).toHaveLength(1);
     expect(artifact.data.decision_traces).toHaveLength(1);
@@ -47,6 +48,15 @@ describe("local data export and import", () => {
     expect(artifact.data.card_period_summaries).toHaveLength(1);
     expect(artifact.data.miles_leakage_items).toHaveLength(1);
     expect(artifact.data.planned_purchases).toHaveLength(1);
+    expect(artifact.data.income_streams).toHaveLength(1);
+    expect(artifact.data.asset_liability_accounts).toHaveLength(1);
+    expect(artifact.data.cpf_accounts).toHaveLength(1);
+    expect(artifact.data.property_profiles).toHaveLength(1);
+    expect(artifact.data.healthcare_assumptions).toHaveLength(1);
+    expect(artifact.data.financial_goals).toHaveLength(1);
+    expect(artifact.data.projection_runs).toHaveLength(1);
+    expect(artifact.data.projection_years).toHaveLength(1);
+    expect(artifact.data.advisor_insights).toHaveLength(1);
     expect(artifact.data.seeded_data_versions).toHaveLength(1);
 
     const serialized = JSON.stringify(artifact);
@@ -63,7 +73,7 @@ describe("local data export and import", () => {
       const result = importLocalData(target, artifact);
       const repositories = createRepositories(target);
 
-      expect(result.importedTables).toBe(23);
+      expect(result.importedTables).toBe(32);
       expect(repositories.profiles.getById("profile_1")?.name).toBe("Primary");
       expect(
         repositories.statementImports.getByProfileAndHash("profile_1", "hash_1")?.bankName,
@@ -83,6 +93,15 @@ describe("local data export and import", () => {
       expect(repositories.cardPeriodSummaries.listForProfile("profile_1")).toHaveLength(1);
       expect(repositories.milesLeakageItems.listForProfile("profile_1")).toHaveLength(1);
       expect(repositories.plannedPurchases.listForProfile("profile_1")).toHaveLength(1);
+      expect(repositories.incomeStreams.listForProfile("profile_1")).toHaveLength(1);
+      expect(repositories.assetLiabilityAccounts.listForProfile("profile_1")).toHaveLength(1);
+      expect(repositories.cpfAccounts.listForProfile("profile_1")).toHaveLength(1);
+      expect(repositories.propertyProfiles.listForProfile("profile_1")).toHaveLength(1);
+      expect(repositories.healthcareAssumptions.listForProfile("profile_1")).toHaveLength(1);
+      expect(repositories.financialGoals.listForProfile("profile_1")).toHaveLength(1);
+      expect(repositories.projectionRuns.listForProfile("profile_1")).toHaveLength(1);
+      expect(repositories.projectionYears.listForRun(`projection_run_profile_1`)).toHaveLength(1);
+      expect(repositories.advisorInsights.listOpenForProfile("profile_1")).toHaveLength(1);
       expect(repositories.decisionTraces.listForSourceRecord("transaction_profile_1")).toHaveLength(
         1,
       );
@@ -210,6 +229,58 @@ function seedSourceDatabase(
     annualizedExpensesMinor: 5_110_000,
     source: "statement_import",
   });
+  repositories.incomeStreams.create({
+    id: `income_${profileId}`,
+    profileId,
+    label: "Salary",
+    incomeType: "salary",
+    annualAmountMinor: 18_000_000,
+    annualBonusMinor: 2_000_000,
+    growthRateBasisPoints: 300,
+  });
+  repositories.assetLiabilityAccounts.create({
+    id: `asset_${profileId}`,
+    profileId,
+    accountLabel: "Brokerage",
+    accountKind: "asset",
+    assetClass: "brokerage",
+    balanceMinor: 25_000_000,
+    expectedReturnBasisPoints: 550,
+    liquidity: "liquid",
+  });
+  repositories.cpfAccounts.create({
+    id: `cpf_${profileId}`,
+    profileId,
+    oaBalanceMinor: 6_000_000,
+    saBalanceMinor: 8_000_000,
+    maBalanceMinor: 3_000_000,
+    asOfDate: "2026-06-30",
+  });
+  repositories.propertyProfiles.create({
+    id: `property_${profileId}`,
+    profileId,
+    propertyType: "hdb",
+    estimatedValueMinor: 70_000_000,
+    outstandingMortgageMinor: 20_000_000,
+    monthlyPaymentMinor: 220_000,
+  });
+  repositories.healthcareAssumptions.create({
+    id: `healthcare_${profileId}`,
+    profileId,
+    annualPremiumMinor: 240_000,
+    annualOutOfPocketMinor: 100_000,
+    escalationRateBasisPoints: 400,
+  });
+  repositories.financialGoals.create({
+    id: `goal_${profileId}`,
+    profileId,
+    goalType: "emergency_fund",
+    label: "Emergency fund",
+    targetAmountMinor: 36_000_000,
+    currentAmountMinor: 20_000_000,
+    targetDate: "2027-06-30",
+    priority: 1,
+  });
   repositories.transactions.create({
     id: `transaction_${profileId}`,
     profileId,
@@ -240,6 +311,44 @@ function seedSourceDatabase(
     confidenceScore: 0.91,
     explanationText: "Trust score uses parser confidence.",
     caveatJson: "[]",
+  });
+  repositories.projectionRuns.create({
+    id: `projection_run_${profileId}`,
+    profileId,
+    runType: "baseline",
+    inputHash: `input_hash_${profileId}`,
+    assumptionsJson: JSON.stringify({ swr: 0.035 }),
+    resultSummaryJson: JSON.stringify({ fiAge: 45 }),
+    confidenceScore: 0.88,
+    calculatedAt: "2026-06-30T00:00:00.000Z",
+  });
+  repositories.projectionYears.create({
+    id: `projection_year_${profileId}`,
+    profileId,
+    projectionRunId: `projection_run_${profileId}`,
+    yearIndex: 0,
+    calendarYear: 2026,
+    age: 36,
+    liquidAssetsMinor: 25_000_000,
+    cpfBalanceMinor: 17_000_000,
+    propertyEquityMinor: 50_000_000,
+    annualIncomeMinor: 18_000_000,
+    annualExpensesMinor: 5_110_000,
+    annualSavingsMinor: 5_400_000,
+    fireTargetMinor: 162_000_000,
+    fireProgressBasisPoints: 5600,
+  });
+  repositories.advisorInsights.create({
+    id: `insight_${profileId}`,
+    profileId,
+    projectionRunId: `projection_run_${profileId}`,
+    insightType: "savings_gap",
+    severity: "warning",
+    title: "Monthly savings gap",
+    body: "Increase monthly savings to hit the target retirement age.",
+    recommendedAction: "Review spending and goal timing.",
+    confidenceScore: 0.82,
+    traceId: `trace_${profileId}`,
   });
   repositories.statementReconciliations.create({
     id: `reconciliation_${profileId}`,
