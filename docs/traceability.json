@@ -224,18 +224,6 @@
       "owner": "full-stack-delivery"
     },
     {
-      "requirementId": "REQ-FIRE-004",
-      "source": "Release 3 goals and gap planner",
-      "epic": "R3-5",
-      "dataRule": "Goal gap planner calculates inflation-adjusted targets, remaining gaps, monthly funding requirements, FIRE conflicts, pressure labels, and next best actions for active financial goals.",
-      "acceptanceCriteriaId": "AC-FIRE-004",
-      "automatedTestIds": ["tests/planner/goalGapPlanner.test.ts"],
-      "manualEvidence": "Planner review showing active goals ranked by priority, gap, deadline pressure, and FIRE impact.",
-      "uiSurface": "Goals Planner Engine",
-      "releaseGate": "Goal gap planner unit tests pass and every active goal receives a pressure label and explanation.",
-      "owner": "full-stack-delivery"
-    },
-    {
       "requirementId": "REQ-DB-002",
       "source": "Release 3 planner data model upgrade",
       "epic": "R3-3",

@@ -2399,41 +2399,6 @@
       ]
     },
     {
-      "id": "R3-GOALS-001",
-      "area": "goals-gap-planner",
-      "priority": "blocker",
-      "requirementRefs": ["REQ-FIRE-004", "R3-5"],
-      "grader": {
-        "type": "binary"
-      },
-      "automationLayer": "unit-test",
-      "scenario": "Goals and gap planner ranks active goals and calculates target gaps, monthly funding needs, FIRE conflicts, pressure labels, and next best actions.",
-      "input": {
-        "commands": ["npm test -- tests/planner/goalGapPlanner.test.ts"],
-        "goalSignals": [
-          "goal type",
-          "priority",
-          "target amount",
-          "current amount",
-          "target date",
-          "inflation adjustment",
-          "retirement-year projection"
-        ]
-      },
-      "expected": [
-        "Every active goal receives remaining gap and required monthly funding values.",
-        "Inflation-adjusted goals grow to the target date.",
-        "Goals that reduce retirement-year FIRE assets below target are marked as FIRE conflicts.",
-        "Overdue unfunded goals are blocked.",
-        "The plan exposes concise next best actions."
-      ],
-      "passCriteria": [
-        "Goal gap planner unit tests pass.",
-        "Goal pressure labels are deterministic.",
-        "The output can explain why a goal is funded, on track, watch, shortfall, or blocked."
-      ]
-    },
-    {
       "id": "RELEASE-001",
       "area": "release-gate",
       "priority": "blocker",
