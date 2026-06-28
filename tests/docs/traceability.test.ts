@@ -56,6 +56,7 @@ describe("traceability matrix", () => {
         "REQ-MCC-001",
         "REQ-UI-001",
         "REQ-UI-002",
+        "REQ-UI-003",
         "REQ-DB-001",
         "REQ-DB-002",
         "REQ-SEC-001",

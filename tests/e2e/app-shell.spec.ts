@@ -8,10 +8,12 @@ test("desktop dashboard renders and primary buttons change state", async ({ page
 
   await expect(desktop.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(desktop.getByRole("table", { name: "Imported transaction review" })).toBeVisible();
-  await expect(desktop.getByText("FI impact")).toBeVisible();
+  await expect(desktop.getByText("FIRE command centre")).toBeVisible();
+  await expect(desktop.getByLabel("FIRE command cards")).toBeVisible();
+  await expect(desktop.getByText("Advisor action")).toBeVisible();
 
-  await desktop.getByRole("button", { name: "Apply to planner" }).first().click();
-  await expect(desktop.getByRole("button", { name: "Applied" })).toBeVisible();
+  await desktop.getByRole("button", { name: "Apply latest import" }).click();
+  await expect(desktop.getByRole("button", { name: "Planner updated" })).toBeVisible();
 
   await desktop.getByRole("button", { name: "Why this?" }).first().click();
   await expect(page.getByLabel("Why this explanation")).toBeVisible();
@@ -47,9 +49,9 @@ test("mobile shell renders landing page and switches to cards", async ({ page })
   const mobile = page.getByLabel("Wander mobile app");
 
   await expect(
-    mobile.getByRole("heading", { name: /68% to financial independence/i }),
+    mobile.getByRole("heading", { name: /89% to financial independence/i }),
   ).toBeVisible();
-  await expect(mobile.getByText("Review 7 imported rows")).toBeVisible();
+  await expect(mobile.getByText("Goal funding gap")).toBeVisible();
 
   await mobile.getByRole("button", { name: /Cards/i }).click();
 
