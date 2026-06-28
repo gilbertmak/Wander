@@ -2470,6 +2470,36 @@
       ]
     },
     {
+      "id": "R3-DASHBOARD-001",
+      "area": "command-centre-dashboard",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-UI-003", "R3-7"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-test",
+      "scenario": "Command centre dashboard renders FIRE progress, goal gap, CPF checkpoint, emergency reserve, milestones, and top advisor action from planner engine outputs.",
+      "input": {
+        "commands": [
+          "npm test -- tests/planner/commandCentreDashboard.test.ts tests/App.test.tsx",
+          "npm run test:e2e"
+        ],
+        "surfaces": ["Desktop Dashboard", "Mobile Home"]
+      },
+      "expected": [
+        "Dashboard hero prioritizes FIRE command-centre status above transaction review.",
+        "Command cards derive from Singapore FIRE projection, goals, and advisor engines.",
+        "Mobile home uses the same FIRE progress and advisor action as desktop.",
+        "Primary dashboard actions remain interactive.",
+        "Review table remains available below the FIRE command centre."
+      ],
+      "passCriteria": [
+        "Command centre model tests pass.",
+        "App component tests verify dashboard hierarchy and mobile home copy.",
+        "Playwright verifies desktop and mobile dashboard interactions."
+      ]
+    },
+    {
       "id": "RELEASE-001",
       "area": "release-gate",
       "priority": "blocker",

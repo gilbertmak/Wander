@@ -10,15 +10,19 @@ describe("App shell", () => {
     useAppShellStore.setState({ activeSurface: "home", activeTab: "home" });
   });
 
-  it("renders the modern desktop dashboard with the concept-level hierarchy", () => {
+  it("renders the FIRE command centre dashboard with advisor hierarchy", () => {
     render(<App />);
 
     const desktop = screen.getByLabelText("Wander desktop app");
 
     expect(within(desktop).getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
-    expect(within(desktop).getByText("68%")).toBeInTheDocument();
+    expect(
+      within(desktop).getByRole("heading", { name: /89% to financial independence/i }),
+    ).toBeInTheDocument();
+    expect(within(desktop).getByLabelText("FIRE command cards")).toBeInTheDocument();
+    expect(within(desktop).getByText("Advisor action")).toBeInTheDocument();
+    expect(within(desktop).getByText("Goals and gap")).toBeInTheDocument();
     expect(within(desktop).getByRole("table", { name: "Imported transaction review" }));
-    expect(within(desktop).getByText("FI impact")).toBeInTheDocument();
     expect(within(desktop).getByText("Miles overview")).toBeInTheDocument();
     expect(within(desktop).getByText("Expense snapshot")).toBeInTheDocument();
   });
@@ -94,8 +98,8 @@ describe("App shell", () => {
     const mobile = screen.getByLabelText("Wander mobile app");
     const mobileTabs = within(mobile).getByLabelText("Mobile tabs");
 
-    expect(within(mobile).getByRole("heading", { name: /68% to financial independence/i }));
-    expect(within(mobile).getByText("Review 7 imported rows")).toBeInTheDocument();
+    expect(within(mobile).getByRole("heading", { name: /89% to financial independence/i }));
+    expect(within(mobile).getByText("Goal funding gap")).toBeInTheDocument();
 
     await userEvent.click(within(mobileTabs).getByRole("button", { name: /Cards/i }));
 

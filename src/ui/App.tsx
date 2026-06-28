@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 
+import { buildCommandCentreSnapshot } from "../planner/commandCentreDashboard";
+import { planGoalGaps, type GoalInput } from "../planner/goalGapPlanner";
+import { projectSingaporeFire, type SingaporeFireInput } from "../planner/singaporeFireEngine";
 import { applyCorrectionDraft, type CorrectionField } from "../review/correctionWorkflow";
 import { calculateImpactPreview, type ImpactPreview } from "../review/impactPreview";
 import type { ReviewTransaction } from "../review/reviewInboxModel";
@@ -29,14 +32,6 @@ const surfaceLabels: Record<ProductSurface, string> = {
   cards: "Cards & miles",
   desktop: "Planner",
 };
-
-const topMetrics = [
-  { label: "FI Progress", value: "68%", detail: "Age 42 target", tone: "good" },
-  { label: "Net monthly spend", value: "S$4,230", detail: "8.2% below Apr", tone: "good" },
-  { label: "Miles earned", value: "+18,450", detail: "this month", tone: "gold" },
-  { label: "Redeemable", value: "72,000", detail: "miles", tone: "gold" },
-  { label: "Next chunk", value: "S$184", detail: "to next 10k miles", tone: "good" },
-];
 
 const spendBreakdown = [
   { label: "Housing", value: "33%" },
@@ -156,6 +151,89 @@ const sampleImpactPreview = calculateImpactPreview({
   currentMiles: 10_000,
   nextMiles: 9_200,
   recalculationTriggers: ["refund_match_changed", "miles_eligibility_changed"],
+});
+
+const commandCentreFireInput: SingaporeFireInput = {
+  currentAge: 40,
+  targetRetirementAge: 55,
+  lifeExpectancyAge: 90,
+  currentYear: 2026,
+  liquidAssetsMinor: 160_000_000,
+  cpf: {
+    oaMinor: 20_000_000,
+    saMinor: 14_000_000,
+    maMinor: 6_000_000,
+  },
+  annualIncomeMinor: 14_400_000,
+  annualBonusMinor: 2_000_000,
+  monthlyInvestmentMinor: 800_000,
+  annualRetirementSpendMinor: 6_000_000,
+  annualHealthcareSpendMinor: 800_000,
+  propertyValueMinor: 120_000_000,
+  mortgageBalanceMinor: 55_000_000,
+  annualMortgagePaymentMinor: 3_600_000,
+  safeWithdrawalRate: 0.035,
+  liquidReturnRate: 0.045,
+  inflationRate: 0.025,
+  propertyGrowthRate: 0.01,
+};
+
+const commandCentreGoals: GoalInput[] = [
+  {
+    id: "goal_parent_support",
+    goalType: "parent_support",
+    label: "Parent support reserve",
+    targetAmountMinor: 18_000_000,
+    currentAmountMinor: 2_000_000,
+    targetDate: "2030-06-01",
+    priority: 2,
+    status: "active",
+  },
+  {
+    id: "goal_sabbatical",
+    goalType: "travel",
+    label: "Sabbatical travel",
+    targetAmountMinor: 2_400_000,
+    currentAmountMinor: 600_000,
+    targetDate: "2028-06-01",
+    priority: 4,
+    status: "active",
+    inflationAdjusted: false,
+  },
+];
+
+const commandCentreProjection = projectSingaporeFire(commandCentreFireInput);
+const commandCentreGoalPlan = planGoalGaps({
+  currentDate: "2026-06-01",
+  monthlyAvailableForGoalsMinor: 250_000,
+  monthlyReturnRate: 0.003,
+  inflationRate: 0.025,
+  goals: commandCentreGoals,
+  projection: commandCentreProjection,
+});
+const commandCentreAdvisorPlan = {
+  summary: {
+    criticalCount: 1,
+    warningCount: 0,
+    infoCount: 0,
+    topAction: "Increase goal funding by S$1,691 monthly or resize the lowest-priority goal.",
+  },
+  insights: [
+    {
+      title: "Goal funding gap",
+      severity: "critical",
+      confidenceScore: 0.9,
+      recommendedAction:
+        "Increase goal funding by S$1,691 monthly or resize the lowest-priority goal.",
+    },
+  ],
+};
+const commandCentreSnapshot = buildCommandCentreSnapshot({
+  projection: commandCentreProjection,
+  goalPlan: commandCentreGoalPlan,
+  advisorPlan: commandCentreAdvisorPlan,
+  monthlyNetSpendMinor: 600_000,
+  emergencyReserveMinor: 4_000_000,
 });
 
 export function App() {
@@ -292,18 +370,11 @@ function DashboardSurface({
 }) {
   return (
     <div className="dashboard-grid">
-      <section className="metric-ribbon" aria-label="Monthly scorecard">
-        {topMetrics.map((metric) => (
-          <article className={metric.tone} key={metric.label}>
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-            <p>{metric.detail}</p>
-          </article>
-        ))}
-        <button className="primary-action" onClick={onApplyPlanner} type="button">
-          {plannerApplied ? "Applied" : "Apply to planner"}
-        </button>
-      </section>
+      <CommandCentreHero
+        onApplyPlanner={onApplyPlanner}
+        onExplain={onExplain}
+        plannerApplied={plannerApplied}
+      />
 
       <section className="review-table-card" aria-labelledby="review-title">
         <div className="section-heading">
@@ -366,11 +437,139 @@ function DashboardSurface({
 
       <aside className="insight-column" aria-label="Insights">
         <WanderGuideCard onStartSetup={onStartSetup} />
-        <FiImpactCard onApplyPlanner={onApplyPlanner} plannerApplied={plannerApplied} />
+        <AdvisorActionCard onExplain={onExplain} />
+        <GoalGapCard />
+        <CpfHealthCard />
         <MilesOverviewCard />
         <ExpenseSnapshotCard />
       </aside>
     </div>
+  );
+}
+
+function CommandCentreHero({
+  plannerApplied,
+  onApplyPlanner,
+  onExplain,
+}: {
+  plannerApplied: boolean;
+  onApplyPlanner: () => void;
+  onExplain: () => void;
+}) {
+  return (
+    <section className={`command-centre-hero ${commandCentreSnapshot.status}`}>
+      <div className="command-hero-copy">
+        <p className="eyebrow">FIRE command centre</p>
+        <h2>{commandCentreSnapshot.fireProgressPercent}% to financial independence</h2>
+        <p>{commandCentreSnapshot.headline}</p>
+        <div className="command-actions">
+          <button className="primary-action" onClick={onApplyPlanner} type="button">
+            {plannerApplied ? "Planner updated" : "Apply latest import"}
+          </button>
+          <button className="secondary-action" onClick={onExplain} type="button">
+            Why this plan?
+          </button>
+        </div>
+      </div>
+
+      <div className="command-orb" aria-hidden="true">
+        <span>{commandCentreSnapshot.status.replace("_", " ")}</span>
+      </div>
+
+      <div className="command-card-grid" aria-label="FIRE command cards">
+        {commandCentreSnapshot.commandCards.map((card) => (
+          <article className={card.tone} key={card.id}>
+            <span>{card.label}</span>
+            <strong>{card.value}</strong>
+            <p>{card.detail}</p>
+          </article>
+        ))}
+      </div>
+
+      <ol className="milestone-track" aria-label="FIRE milestones">
+        {commandCentreSnapshot.nextMilestones.map((milestone) => (
+          <li className={milestone.tone} key={milestone.label}>
+            <span>{milestone.label}</span>
+            <strong>
+              Age {milestone.age} · {milestone.calendarYear}
+            </strong>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function AdvisorActionCard({ onExplain }: { onExplain: () => void }) {
+  const topInsight = commandCentreAdvisorPlan.insights[0];
+
+  return (
+    <section className="insight-card advisor-card">
+      <p className="eyebrow">Advisor action</p>
+      <h2>{topInsight?.title ?? "Review planner assumptions"}</h2>
+      <p>{topInsight?.recommendedAction ?? commandCentreSnapshot.topAdvisorAction}</p>
+      <dl className="impact-list">
+        <div>
+          <dt>Severity</dt>
+          <dd>{topInsight?.severity ?? "info"}</dd>
+          <strong>{Math.round((topInsight?.confidenceScore ?? 0.75) * 100)}% confidence</strong>
+        </div>
+      </dl>
+      <button className="secondary-action full" onClick={onExplain} type="button">
+        Why this recommendation?
+      </button>
+    </section>
+  );
+}
+
+function GoalGapCard() {
+  return (
+    <section className="insight-card">
+      <p className="eyebrow">Goals and gap</p>
+      <h2>{commandCentreSnapshot.activeGoalCount} active goals</h2>
+      <dl className="impact-list">
+        <div>
+          <dt>Remaining gap</dt>
+          <dd>{formatMinor(commandCentreGoalPlan.totalRemainingGapMinor)}</dd>
+          <strong>
+            {formatMinor(commandCentreSnapshot.monthlyGoalShortfallMinor)} monthly shortfall
+          </strong>
+        </div>
+        <div>
+          <dt>FIRE conflict</dt>
+          <dd>{formatMinor(commandCentreSnapshot.retirementGoalConflictMinor)}</dd>
+          <strong>
+            {commandCentreSnapshot.retirementGoalConflictMinor > 0
+              ? "Review timing"
+              : "No conflict"}
+          </strong>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+function CpfHealthCard() {
+  return (
+    <section className="insight-card">
+      <p className="eyebrow">CPF and reserve</p>
+      <h2>
+        CPF FRS{" "}
+        {commandCentreSnapshot.cpfFullRetirementSumAge
+          ? `age ${commandCentreSnapshot.cpfFullRetirementSumAge}`
+          : "needs review"}
+      </h2>
+      <div className="split-stat">
+        <div>
+          <span>Emergency reserve</span>
+          <strong>{commandCentreSnapshot.emergencyReserveMonths} months</strong>
+        </div>
+        <div>
+          <span>FIRE ready</span>
+          <strong>Age {commandCentreSnapshot.fireReadyAge ?? "n/a"}</strong>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -555,36 +754,6 @@ function PlannerSetupReviewCard({
   );
 }
 
-function FiImpactCard({
-  plannerApplied,
-  onApplyPlanner,
-}: {
-  plannerApplied: boolean;
-  onApplyPlanner: () => void;
-}) {
-  return (
-    <section className="insight-card">
-      <p className="eyebrow">FI impact</p>
-      <h2>If applied this month</h2>
-      <dl className="impact-list">
-        <div>
-          <dt>FIRE number</dt>
-          <dd>S$1,620,000</dd>
-          <strong>-S$12,300</strong>
-        </div>
-        <div>
-          <dt>Retirement age</dt>
-          <dd>45 years 3 months</dd>
-          <strong>-2 months</strong>
-        </div>
-      </dl>
-      <button className="primary-action full" onClick={onApplyPlanner} type="button">
-        {plannerApplied ? "Planner updated" : "Apply to planner"}
-      </button>
-    </section>
-  );
-}
-
 function MilesOverviewCard() {
   return (
     <section className="insight-card">
@@ -756,7 +925,7 @@ function MobileShell({
       <header className="mobile-header">
         <div>
           <p className="eyebrow">Wander</p>
-          <h1>68% to financial independence</h1>
+          <h1>{commandCentreSnapshot.fireProgressPercent}% to financial independence</h1>
         </div>
         <span aria-label="Profile score">92</span>
       </header>
@@ -806,11 +975,17 @@ function MobileHome({
     <section className="mobile-panel">
       <div className="mobile-score-card">
         <span>FI progress</span>
-        <strong>68%</strong>
-        <div className="progress-track" aria-label="68 percent complete">
-          <span style={{ width: "68%" }} />
+        <strong>{commandCentreSnapshot.fireProgressPercent}%</strong>
+        <div
+          className="progress-track"
+          aria-label={`${commandCentreSnapshot.fireProgressPercent} percent complete`}
+        >
+          <span style={{ width: `${Math.min(100, commandCentreSnapshot.fireProgressPercent)}%` }} />
         </div>
-        <p>Age 42 target, 8.2 years runway.</p>
+        <p>
+          FIRE ready age {commandCentreSnapshot.fireReadyAge ?? "n/a"}; reserve{" "}
+          {commandCentreSnapshot.emergencyReserveMonths} months.
+        </p>
       </div>
 
       <section className="mobile-actions" aria-label="Priority actions">
@@ -818,8 +993,8 @@ function MobileHome({
           {plannerApplied ? "Planner updated" : "Apply this month to planner"}
         </button>
         <article>
-          <strong>Review 7 imported rows</strong>
-          <p>Refunds and low-confidence MCCs first.</p>
+          <strong>{commandCentreAdvisorPlan.insights[0]?.title ?? "Review imported rows"}</strong>
+          <p>{commandCentreSnapshot.topAdvisorAction}</p>
         </article>
         <article>
           <strong>S$184 to next miles chunk</strong>
