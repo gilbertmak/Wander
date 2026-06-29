@@ -43,6 +43,7 @@ describe("App shell", () => {
     await userEvent.click(within(nav).getByRole("button", { name: "Planner" }));
 
     expect(within(desktop).getByRole("heading", { name: "Current month applied" }));
+    expect(within(desktop).getByLabelText("Scenario stress testing")).toBeInTheDocument();
   });
 
   it("opens FIRE reports with chart sections", async () => {

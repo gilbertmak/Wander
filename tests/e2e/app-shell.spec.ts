@@ -22,6 +22,7 @@ test("desktop dashboard renders and primary buttons change state", async ({ page
 
   await desktop.getByLabel("Workspace sections").getByRole("button", { name: "Planner" }).click();
   await expect(desktop.getByRole("heading", { name: "Current month applied" })).toBeVisible();
+  await expect(desktop.getByLabel("Scenario stress testing")).toBeVisible();
 
   await desktop.getByLabel("Workspace sections").getByRole("button", { name: "Reports" }).click();
   await expect(desktop.getByRole("heading", { name: "FIRE journey report" })).toBeVisible();
