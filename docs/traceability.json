@@ -299,6 +299,22 @@
       "owner": "full-stack-delivery"
     },
     {
+      "requirementId": "REQ-REL-001",
+      "source": "Release 3 evals, safety, and release hardening",
+      "epic": "R3-10",
+      "dataRule": "Release hardening verifies Release 3 traceability, eval coverage, automated tests, and browser-safe imports for UI-facing modules.",
+      "acceptanceCriteriaId": "AC-REL-001",
+      "automatedTestIds": [
+        "tests/release/releaseHardening.test.ts",
+        "tests/docs/evalsManifest.test.ts",
+        "tests/docs/traceability.test.ts"
+      ],
+      "manualEvidence": "Release 3 screenshot and product-review evidence attached before release sign-off.",
+      "uiSurface": "Release Gate",
+      "releaseGate": "Release hardening, eval manifest, and traceability tests pass.",
+      "owner": "quality-assurance"
+    },
+    {
       "requirementId": "REQ-DB-002",
       "source": "Release 3 planner data model upgrade",
       "epic": "R3-3",
