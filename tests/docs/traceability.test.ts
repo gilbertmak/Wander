@@ -47,6 +47,7 @@ describe("traceability matrix", () => {
         "REQ-FIRE-003",
         "REQ-FIRE-004",
         "REQ-FIRE-005",
+        "REQ-FIRE-006",
         "REQ-INGEST-001",
         "REQ-TXN-001",
         "REQ-REFUND-001",

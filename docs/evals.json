@@ -2500,6 +2500,34 @@
       ]
     },
     {
+      "id": "R3-REPORTS-001",
+      "area": "fire-charts-reports",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-FIRE-006", "R3-8"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-test",
+      "scenario": "Reports surface renders FIRE trajectory, FIRE gap, retirement spending, CPF trajectory, goal funding, and asset bucket charts from deterministic planner outputs.",
+      "input": {
+        "commands": [
+          "npm test -- tests/planner/fireChartsReports.test.ts tests/App.test.tsx",
+          "npm run test:e2e"
+        ],
+        "surfaces": ["Reports"]
+      },
+      "expected": [
+        "Report model exposes chart-ready sections for FIRE trajectory, gap, spending, CPF, goals, and asset buckets.",
+        "Reports navigation opens a readable desktop report surface.",
+        "Report cards summarize current FIRE gap, planning-age assets, and monthly goal shortfall."
+      ],
+      "passCriteria": [
+        "Report model tests pass.",
+        "App component tests verify Reports navigation and chart sections.",
+        "Playwright verifies the Reports surface opens from desktop navigation."
+      ]
+    },
+    {
       "id": "RELEASE-001",
       "area": "release-gate",
       "priority": "blocker",
