@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { buildCommandCentreSnapshot } from "../planner/commandCentreDashboard";
+import { buildFireChartsReport, type FireReportSection } from "../planner/fireChartsReports";
 import { planGoalGaps, type GoalInput } from "../planner/goalGapPlanner";
 import { projectSingaporeFire, type SingaporeFireInput } from "../planner/singaporeFireEngine";
 import { applyCorrectionDraft, type CorrectionField } from "../review/correctionWorkflow";
@@ -31,6 +32,7 @@ const surfaceLabels: Record<ProductSurface, string> = {
   onboarding: "Setup",
   cards: "Cards & miles",
   desktop: "Planner",
+  reports: "Reports",
 };
 
 const spendBreakdown = [
@@ -235,6 +237,12 @@ const commandCentreSnapshot = buildCommandCentreSnapshot({
   monthlyNetSpendMinor: 600_000,
   emergencyReserveMinor: 4_000_000,
 });
+const fireChartsReport = buildFireChartsReport({
+  generatedAt: "2026-06-29",
+  projection: commandCentreProjection,
+  goalPlan: commandCentreGoalPlan,
+  sampleEveryYears: 10,
+});
 
 export function App() {
   const activeTab = useAppShellStore((state) => state.activeTab);
@@ -348,6 +356,7 @@ function DesktopShell({
         {activeSurface === "desktop" && (
           <PlannerSurface preview={sampleImpactPreview} plannerApplied={plannerApplied} />
         )}
+        {activeSurface === "reports" && <ReportsSurface />}
       </section>
     </section>
   );
@@ -906,6 +915,81 @@ function PlannerSurface({
       </section>
       <CorrectionPanel />
     </div>
+  );
+}
+
+function ReportsSurface() {
+  return (
+    <div className="reports-surface" aria-label="FIRE charts and reports">
+      <section className="insight-card wide report-summary-card">
+        <p className="eyebrow">Reports</p>
+        <h2>FIRE journey report</h2>
+        <div className="score-grid">
+          {fireChartsReport.reportCards.map((card) => (
+            <article key={card.id}>
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <p>{card.detail}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <ReportChartCard section={fireChartsReport.fireTrajectory} />
+      <ReportChartCard section={fireChartsReport.fireGap} />
+      <ReportChartCard section={fireChartsReport.retirementSpending} />
+      <ReportChartCard section={fireChartsReport.cpfTrajectory} />
+      <ReportChartCard section={fireChartsReport.goalFunding} />
+
+      <section className="insight-card report-chart-card">
+        <p className="eyebrow">Asset buckets</p>
+        <h2>Current wealth mix</h2>
+        <div className="asset-bucket-bars">
+          {fireChartsReport.assetBuckets.map((bucket) => (
+            <div key={bucket.label}>
+              <span>{bucket.label}</span>
+              <strong>{formatMinor(bucket.valueMinor)}</strong>
+              <div className={`report-bar ${bucket.tone}`}>
+                <i style={{ width: `${bucket.percent}%` }} />
+              </div>
+              <small>{bucket.percent}%</small>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ReportChartCard({ section }: { section: FireReportSection }) {
+  const maxValue = Math.max(
+    1,
+    ...section.points.map((point) => point.secondaryValueMinor ?? point.valueMinor),
+  );
+
+  return (
+    <section className="insight-card report-chart-card">
+      <p className="eyebrow">{section.title}</p>
+      <h2>{section.summary}</h2>
+      <div className="report-bars" role="img" aria-label={`${section.title} chart`}>
+        {section.points.slice(0, 8).map((point) => (
+          <div key={`${section.id}-${point.label}`}>
+            <span>{point.label}</span>
+            <div className="report-bar">
+              <i style={{ width: `${Math.min(100, (point.valueMinor / maxValue) * 100)}%` }} />
+              {point.secondaryValueMinor !== undefined ? (
+                <b
+                  style={{
+                    left: `${Math.min(100, (point.secondaryValueMinor / maxValue) * 100)}%`,
+                  }}
+                />
+              ) : null}
+            </div>
+            <strong>{formatMinor(point.valueMinor)}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

@@ -45,6 +45,21 @@ describe("App shell", () => {
     expect(within(desktop).getByRole("heading", { name: "Current month applied" }));
   });
 
+  it("opens FIRE reports with chart sections", async () => {
+    render(<App />);
+
+    const desktop = screen.getByLabelText("Wander desktop app");
+    const nav = within(desktop).getByLabelText("Workspace sections");
+
+    await userEvent.click(within(nav).getByRole("button", { name: "Reports" }));
+
+    expect(
+      within(desktop).getByRole("heading", { name: "FIRE journey report" }),
+    ).toBeInTheDocument();
+    expect(within(desktop).getByLabelText("FIRE trajectory chart")).toBeInTheDocument();
+    expect(within(desktop).getByText("Current wealth mix")).toBeInTheDocument();
+  });
+
   it("opens Wander Guide setup and advances bundled onboarding questions", async () => {
     render(<App />);
 

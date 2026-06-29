@@ -267,6 +267,22 @@
       "owner": "product-design"
     },
     {
+      "requirementId": "REQ-FIRE-006",
+      "source": "Release 3 FIRE charts and reports",
+      "epic": "R3-8",
+      "dataRule": "FIRE reports convert projection and goal-plan outputs into chart-ready trajectory, gap, spending, CPF, goal funding, and asset bucket sections.",
+      "acceptanceCriteriaId": "AC-FIRE-006",
+      "automatedTestIds": [
+        "tests/planner/fireChartsReports.test.ts",
+        "tests/App.test.tsx",
+        "tests/e2e/app-shell.spec.ts"
+      ],
+      "manualEvidence": "Reports surface screenshot review for chart readability and responsive fit.",
+      "uiSurface": "Reports",
+      "releaseGate": "Report model, component, and Playwright tests pass.",
+      "owner": "delivery-data-analysis"
+    },
+    {
       "requirementId": "REQ-DB-002",
       "source": "Release 3 planner data model upgrade",
       "epic": "R3-3",
