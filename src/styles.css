@@ -889,6 +889,17 @@ tr.review .status-pill {
   padding: 18px;
 }
 
+.reports-surface {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 18px;
+}
+
+.report-summary-card {
+  grid-column: 1 / -1;
+}
+
 .insight-card.wide {
   max-width: 920px;
 }
@@ -922,6 +933,79 @@ tr.review .status-pill {
 
 .correction-panel {
   max-width: 920px;
+}
+
+.report-chart-card {
+  min-width: 0;
+}
+
+.report-chart-card h2 {
+  color: var(--text);
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.report-bars,
+.asset-bucket-bars {
+  display: grid;
+  gap: 12px;
+}
+
+.report-bars > div,
+.asset-bucket-bars > div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 112px;
+  align-items: center;
+  gap: 10px;
+}
+
+.asset-bucket-bars > div {
+  grid-template-columns: 120px 112px minmax(0, 1fr) 48px;
+}
+
+.report-bars span,
+.asset-bucket-bars span,
+.asset-bucket-bars small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.report-bars strong,
+.asset-bucket-bars strong {
+  font-size: 0.84rem;
+  text-align: right;
+}
+
+.report-bar {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel-muted);
+}
+
+.report-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green), var(--gold));
+}
+
+.report-bar b {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--red);
+}
+
+.report-bar.cpf i {
+  background: linear-gradient(90deg, var(--blue), #79a7c2);
+}
+
+.report-bar.property i {
+  background: linear-gradient(90deg, var(--gold), #ffcf70);
 }
 
 .form-grid {
