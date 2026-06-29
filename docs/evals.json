@@ -2562,6 +2562,35 @@
       ]
     },
     {
+      "id": "R3-HARDENING-001",
+      "area": "release-hardening",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-REL-001", "R3-10"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "security-test",
+      "scenario": "Release hardening verifies Release 3 requirement coverage, eval coverage, automated test mapping, and browser-safe UI imports.",
+      "input": {
+        "commands": [
+          "npm test -- tests/release/releaseHardening.test.ts tests/docs/evalsManifest.test.ts tests/docs/traceability.test.ts",
+          "npm run evals",
+          "npm run build"
+        ]
+      },
+      "expected": [
+        "Every Release 3 requirement has a traceability row.",
+        "Every Release 3 requirement has eval coverage.",
+        "Every Release 3 requirement has automated test references.",
+        "UI-facing modules do not import Node-only modules."
+      ],
+      "passCriteria": [
+        "Release hardening test reports ready true.",
+        "Eval manifest audit passes.",
+        "Production build completes without Node-only UI import warnings."
+      ]
+    },
+    {
       "id": "RELEASE-001",
       "area": "release-gate",
       "priority": "blocker",
