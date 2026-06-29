@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { buildCommandCentreSnapshot } from "../planner/commandCentreDashboard";
 import { buildFireChartsReport, type FireReportSection } from "../planner/fireChartsReports";
 import { planGoalGaps, type GoalInput } from "../planner/goalGapPlanner";
+import { runSingaporeStressTests } from "../planner/singaporeStressTesting";
 import { projectSingaporeFire, type SingaporeFireInput } from "../planner/singaporeFireEngine";
 import { applyCorrectionDraft, type CorrectionField } from "../review/correctionWorkflow";
 import { calculateImpactPreview, type ImpactPreview } from "../review/impactPreview";
@@ -243,6 +244,7 @@ const fireChartsReport = buildFireChartsReport({
   goalPlan: commandCentreGoalPlan,
   sampleEveryYears: 10,
 });
+const stressTestReport = runSingaporeStressTests({ baseInput: commandCentreFireInput });
 
 export function App() {
   const activeTab = useAppShellStore((state) => state.activeTab);
@@ -914,7 +916,34 @@ function PlannerSurface({
         </dl>
       </section>
       <CorrectionPanel />
+      <StressTestingPanel />
     </div>
+  );
+}
+
+function StressTestingPanel() {
+  return (
+    <section className="insight-card wide" aria-label="Scenario stress testing">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Scenario and stress testing</p>
+          <h2>{stressTestReport.summary}</h2>
+        </div>
+      </div>
+      <div className="stress-grid">
+        {stressTestReport.results.map((result) => (
+          <article className={result.severity} key={result.scenario.id}>
+            <span>{result.scenario.label}</span>
+            <strong>
+              {result.fireReadyAgeDelta === undefined
+                ? "No FI date"
+                : `${result.fireReadyAgeDelta >= 0 ? "+" : ""}${result.fireReadyAgeDelta} years`}
+            </strong>
+            <p>{result.recommendedAction}</p>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 

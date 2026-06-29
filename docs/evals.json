@@ -2528,6 +2528,69 @@
       ]
     },
     {
+      "id": "R3-STRESS-001",
+      "area": "scenario-stress-testing",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-FIRE-007", "R3-9"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-test",
+      "scenario": "Scenario and stress testing applies deterministic shocks to Singapore FIRE inputs and renders severity-ranked results in the planner.",
+      "input": {
+        "commands": [
+          "npm test -- tests/planner/singaporeStressTesting.test.ts tests/App.test.tsx",
+          "npm run test:e2e"
+        ],
+        "scenarios": [
+          "market_shock",
+          "inflation_spike",
+          "expense_shock",
+          "income_pause",
+          "late_retirement"
+        ]
+      },
+      "expected": [
+        "Stress model applies scenario adjustments without mutating baseline input.",
+        "Worst scenario is selected by severity and FIRE-date impact.",
+        "Planner surface displays scenario severity and recommended actions."
+      ],
+      "passCriteria": [
+        "Stress model tests pass.",
+        "Component tests verify planner stress panel.",
+        "Playwright verifies planner stress panel visibility."
+      ]
+    },
+    {
+      "id": "R3-HARDENING-001",
+      "area": "release-hardening",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-REL-001", "R3-10"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "security-test",
+      "scenario": "Release hardening verifies Release 3 requirement coverage, eval coverage, automated test mapping, and browser-safe UI imports.",
+      "input": {
+        "commands": [
+          "npm test -- tests/release/releaseHardening.test.ts tests/docs/evalsManifest.test.ts tests/docs/traceability.test.ts",
+          "npm run evals",
+          "npm run build"
+        ]
+      },
+      "expected": [
+        "Every Release 3 requirement has a traceability row.",
+        "Every Release 3 requirement has eval coverage.",
+        "Every Release 3 requirement has automated test references.",
+        "UI-facing modules do not import Node-only modules."
+      ],
+      "passCriteria": [
+        "Release hardening test reports ready true.",
+        "Eval manifest audit passes.",
+        "Production build completes without Node-only UI import warnings."
+      ]
+    },
+    {
       "id": "RELEASE-001",
       "area": "release-gate",
       "priority": "blocker",
