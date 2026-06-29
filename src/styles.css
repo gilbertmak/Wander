@@ -935,6 +935,45 @@ tr.review .status-pill {
   max-width: 920px;
 }
 
+.stress-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 20px 20px;
+}
+
+.stress-grid article {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-muted);
+  padding: 14px;
+}
+
+.stress-grid span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.stress-grid strong {
+  display: block;
+  margin: 8px 0;
+  font-size: 1.35rem;
+}
+
+.stress-grid .high strong {
+  color: var(--red);
+}
+
+.stress-grid .medium strong {
+  color: var(--gold);
+}
+
+.stress-grid .low strong {
+  color: var(--green);
+}
+
 .report-chart-card {
   min-width: 0;
 }

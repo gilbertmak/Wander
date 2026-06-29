@@ -2528,6 +2528,40 @@
       ]
     },
     {
+      "id": "R3-STRESS-001",
+      "area": "scenario-stress-testing",
+      "priority": "blocker",
+      "requirementRefs": ["REQ-FIRE-007", "R3-9"],
+      "grader": {
+        "type": "binary"
+      },
+      "automationLayer": "e2e-test",
+      "scenario": "Scenario and stress testing applies deterministic shocks to Singapore FIRE inputs and renders severity-ranked results in the planner.",
+      "input": {
+        "commands": [
+          "npm test -- tests/planner/singaporeStressTesting.test.ts tests/App.test.tsx",
+          "npm run test:e2e"
+        ],
+        "scenarios": [
+          "market_shock",
+          "inflation_spike",
+          "expense_shock",
+          "income_pause",
+          "late_retirement"
+        ]
+      },
+      "expected": [
+        "Stress model applies scenario adjustments without mutating baseline input.",
+        "Worst scenario is selected by severity and FIRE-date impact.",
+        "Planner surface displays scenario severity and recommended actions."
+      ],
+      "passCriteria": [
+        "Stress model tests pass.",
+        "Component tests verify planner stress panel.",
+        "Playwright verifies planner stress panel visibility."
+      ]
+    },
+    {
       "id": "RELEASE-001",
       "area": "release-gate",
       "priority": "blocker",
