@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "db:migrate": "tsx scripts/migrate.ts",
     "evals": "tsx scripts/evalAudit.ts",
+    "evals:report": "tsx scripts/evalAudit.ts",
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc -b --pretty false",

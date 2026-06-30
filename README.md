@@ -4,7 +4,7 @@ To consolidate my Agentic AI learning:
 
 1. Multi-agent AI SDLC with orchestration, PRD drafting, roadmap feedback by technical members, development and testing suite;
 2. Epic/task level breakdown for development and testing context management, and traceability;
-3. Mandatory evals for proper requirement mapping ("Evals are the new PRD"), golden evals, and segregating binary vs LLM-as-a-judge eval cases.
+3. Mandatory evals for proper requirement mapping ("Evals are the new PRD"), golden test cases, and segregating deterministic binary cases vs LLM-as-a-judge non-deterministic cases.
 
 - [docs/IMPLEMENTATION_HANDOFF.md](docs/IMPLEMENTATION_HANDOFF.md): architecture, product behavior,
   schema, UI requirements, and implementation sequence.
@@ -100,6 +100,50 @@ The intended harness model:
 - LLM judge evals use deterministic fixtures by default and live model scoring only when explicitly
   enabled.
 
+### AI DevOps Pipeline
+
+The project treats requirements, evals, implementation, and release evidence as one pipeline. The
+goal is to make every pull request answer three questions: what changed, what requirement it maps to,
+and what evidence says it still works.
+
+```mermaid
+flowchart TD
+  A["Product intent and roadmap"] --> B["Implementation handoff"]
+  B --> C["docs/evals.json<br/>Eval PRD"]
+  C --> D["Golden test cases"]
+  C --> E["Binary test mappings"]
+  D --> F["LLM-as-a-judge suite<br/>DeepEval or manual trigger of subagent review"]
+  E --> G["Local developer loop"]
+  F --> G
+  G --> H["Create Github pull request"]
+  H --> I["CI install"]
+  I --> J["Typecheck and lint"]
+  J --> K["Vitest domain tests"]
+  K --> L["Build and Playwright"]
+  L --> M["Eval report<br/>npm run evals:report"]
+  M --> N["GitHub job summary"]
+  M --> O["JSON and Markdown artifacts"]
+  N --> P{"Implemented gates pass?"}
+  O --> P
+  P -->|No| Q["Fix smallest failing behavior"]
+  Q --> G
+  P -->|Yes| R["Merge"]
+  R --> S["Post-merge trend review"]
+  S --> C
+```
+
+Eval output is displayed in three places:
+
+- Local CLI: `npm run evals:report` prints the audit JSON for fast developer feedback.
+- PR evidence: CI appends `test-results/evals/latest.md` to the GitHub job summary.
+- Artifacts: CI uploads `test-results/evals/latest.json` and `test-results/evals/latest.md` for
+  machine-readable history and human review.
+
+Monitoring starts with GitHub artifacts rather than cloud dashboards because this is a private
+finance app. The tracked signals are eval count, automated coverage, external or future evidence
+count, blocker eval count, and automation-layer distribution. Live LLM scoring can be added later
+through DeepEval when an explicit judge-provider secret or approved local model runner exists.
+
 ## Unique Selling Points
 
 - Persistent local database: Spending, imports, corrections, card rules, reward ledger entries, and
@@ -191,6 +235,7 @@ npm run typecheck
 npm run lint
 npm run test
 npm run test:e2e
+npm run evals:report
 ```
 
 Format:
