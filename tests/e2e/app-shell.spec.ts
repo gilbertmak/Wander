@@ -13,6 +13,7 @@ test("desktop dashboard renders and primary buttons change state", async ({ page
   await expect(desktop.getByLabel("What changed since last import")).toBeVisible();
   await expect(desktop.getByLabel("Today's actions")).toBeVisible();
   await expect(desktop.getByLabel("Singapore benchmark")).toBeVisible();
+  await expect(desktop.getByLabel("Goal progress")).toBeVisible();
   await expect(desktop.getByText("Advisor action")).toBeVisible();
   await expect(desktop.getByRole("button", { name: "Apply latest import" })).toHaveCount(0);
   await expect(desktop.getByRole("button", { name: "Why this plan?" })).toHaveCount(0);
@@ -34,9 +35,9 @@ test("desktop dashboard renders and primary buttons change state", async ({ page
   await expect(desktop.getByLabel("Search merchant, note, card, MCC, or refund")).toBeVisible();
 
   await desktop.getByLabel("Workspace sections").getByRole("button", { name: "Planner" }).click();
-  await expect(
-    desktop.getByRole("heading", { name: "Waiting for selected changes" }),
-  ).toBeVisible();
+  await expect(desktop.getByRole("heading", { name: "Planner profile" })).toBeVisible();
+  await expect(desktop.getByLabel("Onboarding planner stats")).toBeVisible();
+  await expect(desktop.getByLabel("Planner growth projection")).toBeVisible();
   await expect(desktop.getByLabel("Scenario stress testing")).toBeVisible();
 
   await desktop.getByLabel("Workspace sections").getByRole("button", { name: "Reports" }).click();

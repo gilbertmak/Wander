@@ -293,7 +293,8 @@ p {
 
 .dashboard-card-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-self: start;
   gap: 14px;
   min-width: 0;
 }
@@ -544,12 +545,17 @@ p {
 
 .review-page {
   display: grid;
+  gap: 16px;
   min-width: 0;
   padding: 18px;
 }
 
 .review-workbench {
   grid-column: 1;
+}
+
+.review-page .correction-panel {
+  max-width: none;
 }
 
 .what-changed-strip {
@@ -681,6 +687,68 @@ p {
 .action-icon.search {
   background: var(--blue-soft);
   color: var(--blue);
+}
+
+.card-title-with-icon {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.card-title-with-icon p,
+.card-title-with-icon h2 {
+  margin-bottom: 0;
+}
+
+.card-title-with-icon strong,
+.card-title-with-icon span {
+  display: block;
+}
+
+.card-title-with-icon span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.card-title-with-icon img {
+  border-radius: 8px;
+  box-shadow: 0 5px 14px rgba(5, 22, 17, 0.15);
+}
+
+.goal-progress-card {
+  display: grid;
+  align-content: start;
+}
+
+.goal-progress-list {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.goal-progress-list article {
+  display: grid;
+  gap: 8px;
+}
+
+.goal-progress-list article > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.goal-progress-list strong {
+  font-size: 0.92rem;
+}
+
+.goal-progress-list span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .benchmark-card {
@@ -1209,6 +1277,7 @@ td button.icon-button {
 .secondary-surface {
   display: grid;
   align-content: start;
+  align-self: start;
   gap: 14px;
 }
 
@@ -1861,6 +1930,210 @@ td button.icon-button {
 
 .secondary-surface {
   padding: 18px;
+}
+
+.planner-surface,
+.miles-surface {
+  display: grid;
+  gap: 16px;
+}
+
+.planner-overview-card .section-heading,
+.planner-chart-card .section-heading {
+  padding: 0 0 16px;
+}
+
+.planner-stat-card {
+  display: grid;
+  gap: 16px;
+}
+
+.planner-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.planner-stat-grid article {
+  border-radius: var(--radius);
+  background: var(--panel-muted);
+  padding: 14px;
+}
+
+.planner-stat-grid span,
+.planner-stat-grid small,
+.planner-chart-legend span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.planner-stat-grid strong {
+  display: block;
+  margin: 8px 0 4px;
+  font-size: 1.05rem;
+}
+
+.planner-chart {
+  display: grid;
+  gap: 18px;
+}
+
+.planner-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.planner-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.planner-chart-legend span::before {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  content: "";
+}
+
+.planner-chart-legend .income::before,
+.planner-bars .income {
+  background: var(--blue);
+}
+
+.planner-chart-legend .investment::before,
+.planner-bars .investment {
+  background: var(--green);
+}
+
+.planner-chart-legend .cpf::before,
+.planner-bars .cpf {
+  background: var(--gold);
+}
+
+.planner-chart-legend .networth::before,
+.planner-bars .networth {
+  background: var(--red);
+}
+
+.planner-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  min-height: 300px;
+}
+
+.planner-chart-grid article {
+  display: grid;
+  align-content: end;
+  gap: 8px;
+  border-radius: var(--radius);
+  background: var(--panel-muted);
+  padding: 12px;
+}
+
+.planner-chart-grid article.fire-met {
+  outline: 2px solid rgba(4, 122, 74, 0.34);
+  background: linear-gradient(180deg, rgba(227, 246, 233, 0.72), var(--panel-muted));
+}
+
+.planner-bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: end;
+  gap: 4px;
+  height: 190px;
+}
+
+.planner-bars i {
+  min-height: 8px;
+  border-radius: 999px 999px 3px 3px;
+}
+
+.planner-chart-grid strong,
+.planner-chart-grid span,
+.planner-chart-grid em {
+  display: block;
+  font-style: normal;
+}
+
+.planner-chart-grid span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.planner-chart-grid em {
+  justify-self: start;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green);
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.miles-hero-card {
+  display: grid;
+  gap: 14px;
+}
+
+.miles-hero-card > p {
+  max-width: 760px;
+}
+
+.purchase-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 20px 20px;
+}
+
+.purchase-card-grid article {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-muted);
+  padding: 14px;
+}
+
+.purchase-card-grid dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.purchase-card-grid dl div {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.purchase-card-grid dt {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.purchase-card-grid dd {
+  margin: 4px 0 0;
+  font-weight: 900;
+}
+
+.purchase-card-grid p,
+.leakage-card p {
+  color: var(--muted);
+}
+
+.leakage-card {
+  display: grid;
+  gap: 12px;
 }
 
 .reports-surface {

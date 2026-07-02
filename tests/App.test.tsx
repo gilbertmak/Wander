@@ -25,6 +25,8 @@ describe("App shell", () => {
     expect(within(desktop).getByLabelText("Singapore benchmark")).toBeInTheDocument();
     expect(within(desktop).getByText("Advisor action")).toBeInTheDocument();
     expect(within(desktop).getByText("Goals and gap")).toBeInTheDocument();
+    expect(within(desktop).getByText("Parent support reserve")).toBeInTheDocument();
+    expect(within(desktop).getByLabelText("Goal progress")).toBeInTheDocument();
     expect(
       within(desktop).queryByRole("table", { name: "Imported transaction review" }),
     ).not.toBeInTheDocument();
@@ -47,13 +49,19 @@ describe("App shell", () => {
     await userEvent.click(within(nav).getByRole("button", { name: /Miles/i }));
 
     expect(
-      within(desktop).getByRole("heading", { name: "72,000 redeemable miles" }),
+      within(desktop).getByRole("heading", { name: "87,650 earned miles" }),
     ).toBeInTheDocument();
+    expect(within(desktop).getByText("1.18 cpm")).toBeInTheDocument();
+    expect(within(desktop).getByText(/Recoverable leakage is miles value/i)).toBeInTheDocument();
+    expect(within(desktop).getByText("HSBC Revolution")).toBeInTheDocument();
 
     await userEvent.click(within(desktop).getByRole("button", { name: "Apply to planner" }));
     await userEvent.click(within(nav).getByRole("button", { name: "Planner" }));
 
     expect(within(desktop).getByRole("heading", { name: "Current month applied" }));
+    expect(within(desktop).getByLabelText("Onboarding planner stats")).toBeInTheDocument();
+    expect(within(desktop).getByLabelText("Planner growth projection")).toBeInTheDocument();
+    expect(within(desktop).getByText(/FIRE met at age/i)).toBeInTheDocument();
     expect(within(desktop).getByLabelText("Scenario stress testing")).toBeInTheDocument();
   });
 
@@ -147,7 +155,7 @@ describe("App shell", () => {
 
     const desktop = screen.getByLabelText("Wander desktop app");
     const nav = within(desktop).getByLabelText("Workspace sections");
-    await userEvent.click(within(nav).getByRole("button", { name: "Planner" }));
+    await userEvent.click(within(nav).getByRole("button", { name: /Review Inbox/i }));
 
     await userEvent.selectOptions(screen.getByLabelText("Correction"), "mcc");
     await userEvent.clear(screen.getByLabelText("New value"));

@@ -622,8 +622,8 @@ function DashboardSurface({
       <section className="dashboard-card-grid" aria-label="Dashboard guidance">
         <GoalGapCard />
         <CpfHealthCard />
-        <MilesOverviewCard />
         <ExpenseSnapshotCard />
+        <MilesOverviewCard />
       </section>
 
       <aside className="insight-column" aria-label="Today and benchmark insights">
@@ -1054,6 +1054,7 @@ function ReviewInboxSurface({
           </button>
         </div>
       </section>
+      <CorrectionPanel />
     </div>
   );
 }
@@ -1441,10 +1442,50 @@ function AdvisorActionCard() {
 }
 
 function GoalGapCard() {
+  const retirementGoal = commandCentreGoals[0];
+  const sabbaticalGoal = commandCentreGoals[1];
+  const retirementProgress = retirementGoal
+    ? Math.round((retirementGoal.currentAmountMinor / retirementGoal.targetAmountMinor) * 100)
+    : 0;
+  const sabbaticalProgress = sabbaticalGoal
+    ? Math.round((sabbaticalGoal.currentAmountMinor / sabbaticalGoal.targetAmountMinor) * 100)
+    : 0;
+
   return (
-    <section className="insight-card">
-      <p className="eyebrow">Goals and gap</p>
-      <h2>{commandCentreSnapshot.activeGoalCount} active goals</h2>
+    <section className="insight-card goal-progress-card">
+      <div className="card-title-with-icon">
+        <span className="action-icon bank" aria-hidden="true">
+          G
+        </span>
+        <div>
+          <p className="eyebrow">Goals and gap</p>
+          <h2>{commandCentreSnapshot.activeGoalCount} active goals</h2>
+        </div>
+      </div>
+      <div className="goal-progress-list" aria-label="Goal progress">
+        {retirementGoal ? (
+          <article>
+            <div>
+              <strong>{retirementGoal.label}</strong>
+              <span>{retirementProgress}% funded</span>
+            </div>
+            <div className="progress-track">
+              <span style={{ width: `${Math.min(100, retirementProgress)}%` }} />
+            </div>
+          </article>
+        ) : null}
+        {sabbaticalGoal ? (
+          <article>
+            <div>
+              <strong>{sabbaticalGoal.label}</strong>
+              <span>{sabbaticalProgress}% funded</span>
+            </div>
+            <div className="progress-track">
+              <span style={{ width: `${Math.min(100, sabbaticalProgress)}%` }} />
+            </div>
+          </article>
+        ) : null}
+      </div>
       <dl className="impact-list">
         <div>
           <dt>Remaining gap</dt>
@@ -1862,33 +1903,60 @@ function CardsSurface({
   onApplyPlanner: () => void;
 }) {
   const [savedPurchase, setSavedPurchase] = useState(false);
+  const cardPlans = [
+    {
+      name: "HSBC Revolution",
+      scenario: "Haidilao, S$120, contactless",
+      earnedMiles: "480 miles",
+      nextTranche: "S$880 to monthly 4 mpd cap",
+      redeemedMiles: "0 redeemed",
+      detail: "Dining and contactless spend qualifies before the monthly cap.",
+    },
+    {
+      name: "UOB Lady's",
+      scenario: "Dining category selected",
+      earnedMiles: "480 miles",
+      nextTranche: "S$1,000 category cap left",
+      redeemedMiles: "12,000 redeemed",
+      detail: "Use only while Dining remains the selected bonus category.",
+    },
+    {
+      name: "DBS Woman's World",
+      scenario: "Online checkout backup",
+      earnedMiles: "48 miles",
+      nextTranche: "S$940 to next online tranche",
+      redeemedMiles: "24,000 redeemed",
+      detail: "Lower earn because this purchase is treated as offline/contactless.",
+    },
+  ];
 
   return (
-    <div className="secondary-surface">
-      <section className="insight-card wide">
+    <div className="secondary-surface miles-surface">
+      <section className="insight-card wide miles-hero-card">
         <p className="eyebrow">Cards & miles</p>
-        <h2>72,000 redeemable miles</h2>
+        <h2>87,650 earned miles</h2>
+        <p>S$22,140 of eligible spend generated those miles at an average 1.18 cents per mile.</p>
         <div className="score-grid">
           <article>
-            <span>Earned</span>
-            <strong>18,450</strong>
+            <span>Earned miles</span>
+            <strong>87,650</strong>
           </article>
           <article>
-            <span>Pending</span>
-            <strong>7,240</strong>
+            <span>Spend behind miles</span>
+            <strong>S$22,140</strong>
           </article>
           <article>
-            <span>Reversed</span>
-            <strong>-1,200</strong>
+            <span>Average value</span>
+            <strong>1.18 cpm</strong>
           </article>
           <article>
-            <span>Missed</span>
-            <strong>860</strong>
+            <span>Redeemable</span>
+            <strong>72,000</strong>
           </article>
         </div>
       </section>
 
-      <section className="insight-card wide" aria-label="Plan a purchase">
+      <section className="insight-card wide" aria-label="Plan and purchase">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Plan a purchase</p>
@@ -1898,25 +1966,49 @@ function CardsSurface({
             {savedPurchase ? "Saved" : "Save planned purchase"}
           </button>
         </div>
-        <ol className="ranked-cards">
-          <li>
-            <strong>HSBC Revolution</strong>
-            <span>480 miles, S$880 cap left</span>
-          </li>
-          <li>
-            <strong>UOB Lady's</strong>
-            <span>480 miles, dining category selected</span>
-          </li>
-          <li>
-            <strong>DBS Woman's World</strong>
-            <span>48 miles, offline spend warning</span>
-          </li>
-        </ol>
+        <div className="purchase-card-grid">
+          {cardPlans.map((card) => (
+            <article key={card.name}>
+              <div className="card-title-with-icon">
+                <img
+                  alt={`${card.name} card image`}
+                  height="34"
+                  src={buildCardImage(card.name, card.name.includes("HSBC") ? "navy" : "black")}
+                  width="54"
+                />
+                <div>
+                  <strong>{card.name}</strong>
+                  <span>{card.scenario}</span>
+                </div>
+              </div>
+              <dl>
+                <div>
+                  <dt>Earned</dt>
+                  <dd>{card.earnedMiles}</dd>
+                </div>
+                <div>
+                  <dt>Next tranche</dt>
+                  <dd>{card.nextTranche}</dd>
+                </div>
+                <div>
+                  <dt>Redeemed</dt>
+                  <dd>{card.redeemedMiles}</dd>
+                </div>
+              </dl>
+              <p>{card.detail}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
-      <section className="insight-card wide">
+      <section className="insight-card wide leakage-card">
         <p className="eyebrow">Recoverable leakage</p>
         <h2>600 miles can still be fixed</h2>
+        <p>
+          Recoverable leakage is miles value Wander believes you have not permanently lost yet. It
+          usually comes from transactions with missing card rules, ambiguous MCCs, unmatched
+          refunds, or eligibility gaps that can still be corrected before rewards are finalized.
+        </p>
         <button className="primary-action" onClick={onApplyPlanner} type="button">
           {plannerApplied ? "Planner synced" : "Apply to planner"}
         </button>
@@ -1932,32 +2024,191 @@ function PlannerSurface({
   preview: ImpactPreview;
   plannerApplied: boolean;
 }) {
+  const monthlyRetirementSpendMinor = commandCentreFireInput.annualRetirementSpendMinor / 12;
+  const propertyEquityMinor =
+    (commandCentreFireInput.propertyValueMinor ?? 0) -
+    (commandCentreFireInput.mortgageBalanceMinor ?? 0);
+  const onboardingStats = [
+    { group: "Life", label: "Current age", value: `${commandCentreFireInput.currentAge}` },
+    {
+      group: "Life",
+      label: "Target retirement",
+      value: `Age ${commandCentreFireInput.targetRetirementAge}`,
+    },
+    { group: "Life", label: "Primary goal", value: "Financial independence" },
+    {
+      group: "Life",
+      label: "Target FI spend",
+      value: `${formatMinor(monthlyRetirementSpendMinor)}/mo`,
+    },
+    {
+      group: "Money",
+      label: "Liquid assets",
+      value: formatMinor(commandCentreFireInput.liquidAssetsMinor),
+    },
+    { group: "Money", label: "CPF OA", value: formatMinor(commandCentreFireInput.cpf.oaMinor) },
+    { group: "Money", label: "CPF SA", value: formatMinor(commandCentreFireInput.cpf.saMinor) },
+    { group: "Money", label: "CPF MA", value: formatMinor(commandCentreFireInput.cpf.maMinor) },
+    { group: "Money", label: "Property equity", value: formatMinor(propertyEquityMinor) },
+    { group: "Money", label: "Other debt", value: "S$25,000" },
+    {
+      group: "Assumptions",
+      label: "Annual income",
+      value: formatMinor(commandCentreFireInput.annualIncomeMinor),
+    },
+    {
+      group: "Assumptions",
+      label: "Monthly investment",
+      value: formatMinor(commandCentreFireInput.monthlyInvestmentMinor),
+    },
+    { group: "Assumptions", label: "Portfolio style", value: "Balanced growth" },
+    { group: "Assumptions", label: "Withdrawal strategy", value: "Safe withdrawal" },
+    {
+      group: "Assumptions",
+      label: "Liquid return",
+      value: formatRate(commandCentreFireInput.liquidReturnRate),
+    },
+    {
+      group: "Assumptions",
+      label: "Inflation",
+      value: formatRate(commandCentreFireInput.inflationRate),
+    },
+    {
+      group: "Assumptions",
+      label: "Safe withdrawal",
+      value: formatRate(commandCentreFireInput.safeWithdrawalRate),
+    },
+  ];
+
   return (
-    <div className="secondary-surface">
-      <section className="insight-card wide">
-        <p className="eyebrow">Planner</p>
-        <h2>{plannerApplied ? "Current month applied" : "Waiting for selected changes"}</h2>
+    <div className="secondary-surface planner-surface">
+      <section className="insight-card wide planner-overview-card">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Planner</p>
+            <h2>{plannerApplied ? "Current month applied" : "Planner profile"}</h2>
+          </div>
+          <span className="review-reason">
+            FIRE met at age {commandCentreProjection.fireReadyAge ?? "n/a"}
+          </span>
+        </div>
         <dl className="score-grid">
           <div>
-            <dt>Monthly net spend</dt>
+            <dt>Monthly net spend impact</dt>
             <dd>{formatSignedMoney(preview.monthlyNetSpendDeltaMinor)}</dd>
           </div>
           <div>
-            <dt>Annual expenses</dt>
+            <dt>Annual expense impact</dt>
             <dd>{formatSignedMoney(preview.annualizedExpensesDeltaMinor)}</dd>
           </div>
           <div>
-            <dt>FI age</dt>
+            <dt>FI age impact</dt>
             <dd>{preview.fiAgeDelta ?? "n/a"}</dd>
           </div>
           <div>
-            <dt>Miles</dt>
+            <dt>Miles impact</dt>
             <dd>{preview.milesDelta}</dd>
           </div>
         </dl>
       </section>
-      <CorrectionPanel />
+
+      <section
+        className="insight-card wide planner-stat-card"
+        aria-label="Onboarding planner stats"
+      >
+        <p className="eyebrow">Onboarding inputs</p>
+        <h2>Profile stats used by the planner</h2>
+        <div className="planner-stat-grid">
+          {onboardingStats.map((stat) => (
+            <article key={`${stat.group}-${stat.label}`}>
+              <span>{stat.group}</span>
+              <strong>{stat.value}</strong>
+              <small>{stat.label}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section
+        className="insight-card wide planner-chart-card"
+        aria-label="Planner growth projection"
+      >
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Projection by age</p>
+            <h2>Income, investment, CPF, and net worth growth</h2>
+          </div>
+        </div>
+        <PlannerGrowthChart />
+      </section>
+
       <StressTestingPanel />
+    </div>
+  );
+}
+
+function PlannerGrowthChart() {
+  const points = commandCentreProjection.years
+    .filter((year) => year.yearIndex % 5 === 0 || year.age === commandCentreProjection.fireReadyAge)
+    .slice(0, 9);
+  const maxValue = Math.max(
+    1,
+    ...points.flatMap((point) => [
+      point.employmentIncomeMinor,
+      point.liquidAssetsMinor,
+      point.cpfOaMinor + point.cpfSaMinor + point.cpfMaMinor + point.cpfRaMinor,
+      point.totalFireAssetsMinor,
+    ]),
+  );
+
+  return (
+    <div className="planner-chart">
+      <div className="planner-chart-legend" aria-hidden="true">
+        <span className="income">Income</span>
+        <span className="investment">Investment</span>
+        <span className="cpf">CPF</span>
+        <span className="networth">Total net worth</span>
+      </div>
+      <div
+        className="planner-chart-grid"
+        role="img"
+        aria-label="Projected income, investment, CPF, and net worth by age"
+      >
+        {points.map((point) => {
+          const cpfTotalMinor =
+            point.cpfOaMinor + point.cpfSaMinor + point.cpfMaMinor + point.cpfRaMinor;
+          const fireMet = point.age === commandCentreProjection.fireReadyAge;
+
+          return (
+            <article
+              className={fireMet ? "fire-met" : ""}
+              key={`${point.calendarYear}-${point.age}`}
+            >
+              <div className="planner-bars">
+                <i
+                  className="income"
+                  style={{ height: `${getChartHeight(point.employmentIncomeMinor, maxValue)}%` }}
+                />
+                <i
+                  className="investment"
+                  style={{ height: `${getChartHeight(point.liquidAssetsMinor, maxValue)}%` }}
+                />
+                <i
+                  className="cpf"
+                  style={{ height: `${getChartHeight(cpfTotalMinor, maxValue)}%` }}
+                />
+                <i
+                  className="networth"
+                  style={{ height: `${getChartHeight(point.totalFireAssetsMinor, maxValue)}%` }}
+                />
+              </div>
+              <strong>Age {point.age}</strong>
+              <span>{formatMinor(point.totalFireAssetsMinor)}</span>
+              {fireMet ? <em>FIRE met</em> : null}
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -2268,6 +2519,14 @@ function formatSignedMoney(amountMinor: number): string {
   return `${sign}S$${Math.abs(amountMinor / 100).toLocaleString("en-SG", {
     maximumFractionDigits: 0,
   })}`;
+}
+
+function formatRate(rate: number): string {
+  return `${(rate * 100).toFixed(1)}%`;
+}
+
+function getChartHeight(valueMinor: number, maxValueMinor: number): number {
+  return Math.max(6, Math.min(100, (valueMinor / maxValueMinor) * 100));
 }
 
 function formatMinor(amountMinor: number | undefined): string {
