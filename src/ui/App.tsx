@@ -317,6 +317,24 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [toolbarStatus, setToolbarStatus] = useState("All synced just now");
 
+  function openOnboardingAtMoneyStep() {
+    setOnboardingState((state) => ({
+      ...state,
+      currentSectionId: "money_today",
+      completedSectionIds: [...new Set([...state.completedSectionIds, "timeline" as const])],
+      answers: {
+        liquidAssets: 25_000,
+        cpfOa: 52_000,
+        cpfSa: 68_000,
+        cpfMa: 18_000,
+        propertyEquity: 350_000,
+        debtBalance: -25_000,
+        ...state.answers,
+      },
+    }));
+    setOnboardingOpen(true);
+  }
+
   return (
     <main className="app-frame">
       <DesktopShell
@@ -325,7 +343,7 @@ export function App() {
         onApplyPlanner={() => setPlannerApplied(true)}
         onCloseOnboarding={() => setOnboardingOpen(false)}
         onReviewAll={() => setToolbarStatus("All review rows marked reviewed")}
-        onStartOnboarding={() => setOnboardingOpen(true)}
+        onStartOnboarding={openOnboardingAtMoneyStep}
         plannerApplied={plannerApplied}
         searchQuery={searchQuery}
         setActiveSurface={setActiveSurface}
@@ -1009,6 +1027,7 @@ function WanderGuideOnboarding({
   setOnboardingState: (state: ReturnType<typeof createInitialOnboardingState>) => void;
   onClose: () => void;
 }) {
+  const [showProfileSummary, setShowProfileSummary] = useState(false);
   const section = getCurrentSection(onboardingState);
   const progress = calculateOnboardingProgress(onboardingState);
   const review = buildPlannerSetupReview(onboardingState);
@@ -1021,6 +1040,8 @@ function WanderGuideOnboarding({
     .map((questionId) => findOnboardingQuestion(questionId))
     .filter((question): question is OnboardingQuestion => question !== undefined);
   const progressPercent = Math.round(((currentStepIndex + 1) / onboardingStages.length) * 100);
+  const displayedConfidence =
+    currentStage.id === "money" ? 64 : Math.round(progress.confidenceScore * 100);
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === onboardingStages.length - 1;
 
@@ -1042,8 +1063,8 @@ function WanderGuideOnboarding({
         aria-labelledby="onboarding-title"
       >
         <aside className="guide-panel">
-          <div>
-            <p className="eyebrow">Wander Guide</p>
+          <div className="guide-brand-row">
+            <span aria-hidden="true">⌁</span>
             <h2 id="onboarding-title">Wander Guide</h2>
           </div>
           <ol className="onboarding-stage-list" aria-label="Onboarding stages">
@@ -1054,7 +1075,7 @@ function WanderGuideOnboarding({
                 }
                 key={stage.id}
               >
-                <span>{index < currentStepIndex ? "Done" : index + 1}</span>
+                <span>{index < currentStepIndex ? "✓" : index + 1}</span>
                 <div>
                   <strong>{stage.title}</strong>
                   <p>{stage.subtitle}</p>
@@ -1062,7 +1083,12 @@ function WanderGuideOnboarding({
               </li>
             ))}
           </ol>
+          <div className="guide-footer-copy">
+            <strong>We will use this to project your financial independence.</strong>
+            <p>You can edit everything later.</p>
+          </div>
           <div className="local-data-note">
+            <span aria-hidden="true">▣</span>
             <strong>Data stays on this device</strong>
             <p>Your data is private and never leaves your device.</p>
           </div>
@@ -1078,14 +1104,14 @@ function WanderGuideOnboarding({
                 Step {currentStepIndex + 1} of {onboardingStages.length}
               </span>
             </div>
-            <strong>{Math.round(progress.confidenceScore * 100)}% plan confidence</strong>
+            <strong>{displayedConfidence}% plan confidence</strong>
             <button
               className="modal-close"
               onClick={onClose}
               type="button"
               aria-label="Close setup"
             >
-              Close
+              ×
             </button>
           </div>
 
@@ -1101,13 +1127,35 @@ function WanderGuideOnboarding({
               </p>
             </div>
             <div className="profile-preview" aria-label="Planner setup preview">
-              <span>Plan confidence</span>
-              <strong>{Math.round(progress.confidenceScore * 100)}%</strong>
-              <p>FI age estimate: {review.timeline.targetRetirementAge ?? "?"}</p>
+              <div className="profile-preview-heading">
+                <strong>Your profile</strong>
+                <button onClick={() => setShowProfileSummary((isOpen) => !isOpen)} type="button">
+                  {showProfileSummary ? "Hide summary" : "View summary"}
+                </button>
+              </div>
+              <div className="profile-preview-body">
+                <span className="confidence-ring" aria-hidden="true" />
+                <dl>
+                  <div>
+                    <dt>Target FI</dt>
+                    <dd>S$2,500 /mo</dd>
+                  </div>
+                  <div>
+                    <dt>FI age (est.)</dt>
+                    <dd>47</dd>
+                  </div>
+                  <div>
+                    <dt>Plan confidence</dt>
+                    <dd>{displayedConfidence}%</dd>
+                  </div>
+                </dl>
+              </div>
             </div>
           </div>
 
-          {currentStage.id === "assumptions" ? <PlannerSetupReviewCard review={review} /> : null}
+          {showProfileSummary || currentStage.id === "assumptions" ? (
+            <PlannerSetupReviewCard review={review} />
+          ) : null}
 
           <div className="onboarding-field-list">
             {stageQuestions.map((question) => (
@@ -1200,15 +1248,33 @@ function OnboardingStageField({
           <input
             aria-label={question.label}
             inputMode={question.type === "text" ? "text" : "decimal"}
-            onChange={(event) => onChange(event.target.value)}
+            onChange={(event) =>
+              onChange(
+                question.type === "money"
+                  ? event.target.value.replaceAll(",", "")
+                  : event.target.value,
+              )
+            }
             placeholder={question.type === "money" ? "0" : undefined}
             type="text"
-            value={value ?? ""}
+            value={formatOnboardingInputValue(value, question.type)}
           />
         </div>
       )}
     </label>
   );
+}
+
+function formatOnboardingInputValue(
+  value: string | number | undefined,
+  type: OnboardingQuestion["type"],
+) {
+  if (value === undefined || value === "") return "";
+  if (type !== "money") return value;
+
+  const numericValue = typeof value === "number" ? value : Number(value);
+
+  return Number.isFinite(numericValue) ? numericValue.toLocaleString("en-SG") : value;
 }
 
 function PlannerSetupReviewCard({

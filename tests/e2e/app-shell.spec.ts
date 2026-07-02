@@ -43,17 +43,17 @@ test("desktop setup opens Wander Guide onboarding", async ({ page }) => {
   const modal = page.getByRole("dialog", { name: "Wander Guide" });
   await expect(modal).toBeVisible();
   await expect(modal.getByRole("heading", { name: "Wander Guide" })).toBeVisible();
-  await expect(modal.getByRole("heading", { name: "Your life" })).toBeVisible();
+  await expect(modal.getByRole("heading", { name: "Your money today" })).toBeVisible();
+  await expect(modal.getByText("64% plan confidence")).toBeVisible();
   await expect(modal.getByText("0/12 required")).toHaveCount(0);
 
-  await page.getByLabel("Current age").fill("36");
-  await page.getByLabel("Target retirement age").fill("45");
-  await page.getByLabel("Expected monthly retirement spend").fill("6000");
+  await expect(page.getByLabel("Cash and liquid investments")).toHaveValue("25,000");
+  await page.getByLabel("Cash and liquid investments").fill("30000");
   await modal.getByRole("button", { name: "Continue" }).click();
 
-  await expect(modal.getByRole("heading", { name: "Your money today" })).toBeVisible();
+  await expect(modal.getByRole("heading", { name: "Your assumptions" })).toBeVisible();
   await modal.getByRole("button", { name: "Back" }).click();
-  await expect(modal.getByRole("heading", { name: "Your life" })).toBeVisible();
+  await expect(modal.getByRole("heading", { name: "Your money today" })).toBeVisible();
 });
 
 test("mobile shell renders landing page and switches to cards", async ({ page }) => {
