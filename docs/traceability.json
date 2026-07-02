@@ -150,7 +150,7 @@
       "requirementId": "REQ-UI-002",
       "source": "Approved UI direction: desktop modern layout with necessary cards only",
       "epic": "FP-2, FP-8, FP-9",
-      "dataRule": "Desktop dashboard uses the modern visual system with dashboard layout, review workflow, and non-redundant cards.",
+      "dataRule": "Desktop dashboard uses the modern visual system with dashboard storytelling, modal onboarding, review workflow, and non-redundant cards.",
       "acceptanceCriteriaId": "AC-UI-002",
       "automatedTestIds": [
         "tests/App.test.tsx",
@@ -158,7 +158,7 @@
         "tests/review/reviewInboxModel.test.ts",
         "tests/review/impactPreview.test.ts"
       ],
-      "manualEvidence": "Desktop viewport screenshot review for dashboard, review inbox, and correction dialog.",
+      "manualEvidence": "Desktop viewport screenshot review for dashboard, modal onboarding, review inbox, and correction dialog.",
       "uiSurface": "Desktop Dashboard, Desktop Review Inbox, Correction Dialog",
       "releaseGate": "Component, review model, impact preview, and Playwright tests pass.",
       "owner": "product-design"
@@ -199,15 +199,15 @@
       "requirementId": "REQ-FIRE-002",
       "source": "Release 3 relational onboarding plan",
       "epic": "R3-1",
-      "dataRule": "Wander Guide captures bundled onboarding answers as structured planner setup inputs before any planner data is persisted.",
+      "dataRule": "Wander Guide opens as an in-context modal and captures bundled onboarding answers as structured planner setup inputs before any planner data is persisted.",
       "acceptanceCriteriaId": "AC-FIRE-002",
       "automatedTestIds": [
         "tests/onboarding/wanderGuide.test.ts",
         "tests/App.test.tsx",
         "tests/e2e/app-shell.spec.ts"
       ],
-      "manualEvidence": "Desktop setup screenshot showing Wander Guide orb, timeline bundle, and progress state.",
-      "uiSurface": "Wander Guide Onboarding",
+      "manualEvidence": "Desktop setup screenshot showing Wander Guide modal, orb, back control, progress bar, timeline bundle, and no goals step.",
+      "uiSurface": "Wander Guide Onboarding Modal",
       "releaseGate": "Onboarding unit, component, and Playwright tests pass.",
       "owner": "product-design"
     },
