@@ -20,9 +20,14 @@ describe("App shell", () => {
       within(desktop).getByRole("heading", { name: /89% to financial independence/i }),
     ).toBeInTheDocument();
     expect(within(desktop).getByLabelText("FIRE command cards")).toBeInTheDocument();
+    expect(within(desktop).getByLabelText("What changed since last import")).toBeInTheDocument();
+    expect(within(desktop).getByLabelText("Today's actions")).toBeInTheDocument();
+    expect(within(desktop).getByLabelText("Singapore benchmark")).toBeInTheDocument();
     expect(within(desktop).getByText("Advisor action")).toBeInTheDocument();
     expect(within(desktop).getByText("Goals and gap")).toBeInTheDocument();
-    expect(within(desktop).getByRole("table", { name: "Imported transaction review" }));
+    expect(
+      within(desktop).queryByRole("table", { name: "Imported transaction review" }),
+    ).not.toBeInTheDocument();
     expect(within(desktop).getByText("Miles overview")).toBeInTheDocument();
     expect(within(desktop).getByText("Expense snapshot")).toBeInTheDocument();
     expect(
@@ -76,37 +81,48 @@ describe("App shell", () => {
     const modal = screen.getByRole("dialog", { name: "Wander Guide" });
 
     expect(within(modal).getByRole("heading", { name: "Wander Guide" })).toBeInTheDocument();
-    expect(within(modal).getByRole("heading", { name: "Your life" })).toBeInTheDocument();
+    expect(within(modal).getByRole("heading", { name: "Your money today" })).toBeInTheDocument();
     expect(within(modal).getByLabelText(/setup progress/i)).toBeInTheDocument();
     expect(within(modal).queryByText(/required/i)).not.toBeInTheDocument();
     expect(within(modal).queryByRole("button", { name: /Why am I/i })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Current age")).toHaveAttribute("type", "text");
+    expect(within(modal).getByText("64% plan confidence")).toBeInTheDocument();
+    expect(screen.getByLabelText("Cash and liquid investments")).toHaveValue("25,000");
+    expect(screen.getByLabelText("CPF OA balance")).toHaveValue("52,000");
 
-    await userEvent.type(screen.getByLabelText("Current age"), "36");
-    await userEvent.type(screen.getByLabelText("Target retirement age"), "45");
-    await userEvent.type(screen.getByLabelText("Expected monthly retirement spend"), "6000");
+    await userEvent.click(within(modal).getByRole("button", { name: "View summary" }));
+    expect(within(modal).getByText("Structured plan preview")).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByLabelText("Cash and liquid investments"));
+    await userEvent.type(screen.getByLabelText("Cash and liquid investments"), "30000");
     await userEvent.click(within(modal).getByRole("button", { name: "Continue" }));
 
-    expect(within(modal).getByRole("heading", { name: "Your money today" })).toBeInTheDocument();
-    expect(within(modal).getByText(/Step 2 of 3/i)).toBeInTheDocument();
-    expect(screen.getByLabelText("Cash and liquid investments")).toBeInTheDocument();
+    expect(within(modal).getByRole("heading", { name: "Your assumptions" })).toBeInTheDocument();
+    expect(within(modal).getByText(/Step 3 of 3/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Portfolio style")).toBeInTheDocument();
 
     await userEvent.click(within(modal).getByRole("button", { name: "Back" }));
 
-    expect(within(modal).getByRole("heading", { name: "Your life" })).toBeInTheDocument();
+    expect(within(modal).getByRole("heading", { name: "Your money today" })).toBeInTheDocument();
   });
 
-  it("uses the updated review inbox action model", async () => {
+  it("opens the dedicated review inbox with visual action model", async () => {
     render(<App />);
 
     const desktop = screen.getByLabelText("Wander desktop app");
+    const nav = within(desktop).getByLabelText("Workspace sections");
+    await userEvent.click(within(nav).getByRole("button", { name: /Review Inbox/i }));
+
     const table = within(desktop).getByRole("table", { name: "Imported transaction review" });
 
     expect(within(table).queryByRole("columnheader", { name: "Issue" })).not.toBeInTheDocument();
     expect(within(table).getAllByRole("button", { name: "Confirm" }).length).toBeGreaterThan(0);
     expect(within(table).getByRole("button", { name: "Match refund" })).toBeInTheDocument();
-    expect(within(table).getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(within(table).getAllByRole("button", { name: "Fix miles" }).length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Shopee SG category")).toHaveClass("category-select");
+    expect(screen.getByAltText("Amazon SG logo")).toBeInTheDocument();
+    expect(screen.getByAltText("DBS Altitude card image")).toBeInTheDocument();
+    expect(screen.getAllByText("-S$499.00")[0]).toHaveClass("problem");
+    expect(screen.getByText("+S$128.90")).toHaveClass("refund");
     expect(screen.getByLabelText("Why this needs review")).toBeInTheDocument();
     expect(screen.getByLabelText("Search merchant, note, card, MCC, or refund")).toHaveAttribute(
       "placeholder",

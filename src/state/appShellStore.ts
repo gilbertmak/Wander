@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type ProductSurface = "home" | "cards" | "desktop" | "reports";
+export type ProductSurface = "home" | "review" | "cards" | "desktop" | "reports";
 export type MobileTab = "home" | "plan" | "transactions" | "cards" | "profile";
 
 type AppShellState = {

@@ -29,6 +29,7 @@ const mobileTabs: Array<{ id: MobileTab; label: string; shortLabel: string; badg
 
 const surfaceLabels: Record<ProductSurface, string> = {
   home: "Overview",
+  review: "Review Inbox",
   cards: "Cards & miles",
   desktop: "Planner",
   reports: "Reports",
@@ -40,21 +41,22 @@ const desktopNavItems: Array<{
   badge?: string;
 }> = [
   { surface: "home", label: "Overview" },
-  { surface: "home", label: "Review Inbox", badge: "12" },
+  { surface: "review", label: "Review Inbox", badge: "12" },
   { surface: "cards", label: "Miles", badge: "2" },
   { surface: "desktop", label: "Planner" },
   { surface: "reports", label: "Reports" },
 ];
 
-const reviewTabs = [
-  "Needs decision",
-  "Low confidence",
-  "Refunds",
-  "Miles leakage",
-  "Done",
+const reviewTabMeta = [
+  { id: "Needs decision", icon: "clipboard" },
+  { id: "Low confidence", icon: "warning" },
+  { id: "Refunds", icon: "refund" },
+  { id: "Miles leakage", icon: "plane" },
+  { id: "Done", icon: "check" },
 ] as const;
 
-type ReviewTab = (typeof reviewTabs)[number];
+type ReviewTab = (typeof reviewTabMeta)[number]["id"];
+type ReviewIconId = (typeof reviewTabMeta)[number]["icon"] | "spark" | "sliders" | "dots";
 
 const onboardingStages: Array<{
   id: "life" | "money" | "assumptions";
@@ -97,13 +99,18 @@ const spendBreakdown = [
 
 const transactions = [
   {
-    date: "18 May",
+    date: "18 May 2026",
     merchant: "Shopee SG",
+    merchantMark: "S",
+    merchantTone: "orange",
     note: "SHP-SG-123456",
     category: "Shopping",
     mcc: "5812",
     confidence: "91%",
     card: "Citi Rewards",
+    cardNetwork: "Visa",
+    cardLast4: "1234",
+    cardTone: "blue",
     amount: "-128.90",
     status: "Eligible",
     miles: "+516 miles",
@@ -111,13 +118,18 @@ const transactions = [
     tone: "eligible",
   },
   {
-    date: "18 May",
+    date: "18 May 2026",
     merchant: "Shopee Refund",
+    merchantMark: "S",
+    merchantTone: "orange",
     note: "REF-SG-123456",
     category: "Shopping",
     mcc: "5812",
     confidence: "91%",
     card: "Citi Rewards",
+    cardNetwork: "Visa",
+    cardLast4: "1234",
+    cardTone: "blue",
     amount: "+128.90",
     status: "Refund reversal",
     miles: "-516 miles",
@@ -125,13 +137,18 @@ const transactions = [
     tone: "refund",
   },
   {
-    date: "17 May",
+    date: "17 May 2026",
     merchant: "Cold Storage",
+    merchantMark: "C",
+    merchantTone: "green",
     note: "TAMPINES 1",
     category: "Groceries",
     mcc: "5422",
     confidence: "95%",
     card: "DBS WWMC",
+    cardNetwork: "Mastercard",
+    cardLast4: "8821",
+    cardTone: "black",
     amount: "-86.45",
     status: "Eligible",
     miles: "+172 miles",
@@ -139,13 +156,18 @@ const transactions = [
     tone: "eligible",
   },
   {
-    date: "16 May",
+    date: "16 May 2026",
     merchant: "Spotify Pte. Ltd.",
+    merchantMark: "Sp",
+    merchantTone: "green",
     note: "SPOTIFY",
     category: "Entertainment",
     mcc: "5733",
     confidence: "96%",
     card: "HSBC Revolution",
+    cardNetwork: "Visa",
+    cardLast4: "8888",
+    cardTone: "navy",
     amount: "-11.98",
     status: "Eligible",
     miles: "+22 miles",
@@ -153,17 +175,79 @@ const transactions = [
     tone: "eligible",
   },
   {
-    date: "14 May",
+    date: "14 May 2026",
     merchant: "Amazon SG",
+    merchantMark: "a",
+    merchantTone: "gold",
     note: "AMZN Mktp",
     category: "Shopping",
     mcc: "5942",
     confidence: "72%",
     card: "DBS Altitude",
+    cardNetwork: "Visa",
+    cardLast4: "4318",
+    cardTone: "black",
     amount: "-499.00",
     status: "Check category",
     miles: "0 miles",
-    action: "Edit",
+    action: "Fix miles",
+    tone: "review",
+  },
+  {
+    date: "13 May 2026",
+    merchant: "Grab",
+    merchantMark: "G",
+    merchantTone: "green",
+    note: "Taxi to office",
+    category: "Transport",
+    mcc: "4121",
+    confidence: "95%",
+    card: "UOB Preferred Platinum",
+    cardNetwork: "Visa",
+    cardLast4: "6612",
+    cardTone: "black",
+    amount: "-18.60",
+    status: "Looks good",
+    miles: "+74 miles",
+    action: "Confirm",
+    tone: "eligible",
+  },
+  {
+    date: "12 May 2026",
+    merchant: "SP Group",
+    merchantMark: "SP",
+    merchantTone: "blue",
+    note: "Utilities",
+    category: "Bills",
+    mcc: "4900",
+    confidence: "88%",
+    card: "DBS Woman's World",
+    cardNetwork: "Mastercard",
+    cardLast4: "2408",
+    cardTone: "black",
+    amount: "-128.43",
+    status: "Looks good",
+    miles: "+128 miles",
+    action: "Confirm",
+    tone: "eligible",
+  },
+  {
+    date: "11 May 2026",
+    merchant: "Lazada",
+    merchantMark: "L",
+    merchantTone: "pink",
+    note: "Order 987654321234",
+    category: "Shopping",
+    mcc: "5942",
+    confidence: "68%",
+    card: "Citi PremierMiles",
+    cardNetwork: "Visa",
+    cardLast4: "7201",
+    cardTone: "blue",
+    amount: "-210.00",
+    status: "Miles leakage",
+    miles: "0 miles",
+    action: "Fix miles",
     tone: "review",
   },
 ];
@@ -317,6 +401,24 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [toolbarStatus, setToolbarStatus] = useState("All synced just now");
 
+  function openOnboardingAtMoneyStep() {
+    setOnboardingState((state) => ({
+      ...state,
+      currentSectionId: "money_today",
+      completedSectionIds: [...new Set([...state.completedSectionIds, "timeline" as const])],
+      answers: {
+        liquidAssets: 25_000,
+        cpfOa: 52_000,
+        cpfSa: 68_000,
+        cpfMa: 18_000,
+        propertyEquity: 350_000,
+        debtBalance: -25_000,
+        ...state.answers,
+      },
+    }));
+    setOnboardingOpen(true);
+  }
+
   return (
     <main className="app-frame">
       <DesktopShell
@@ -325,7 +427,7 @@ export function App() {
         onApplyPlanner={() => setPlannerApplied(true)}
         onCloseOnboarding={() => setOnboardingOpen(false)}
         onReviewAll={() => setToolbarStatus("All review rows marked reviewed")}
-        onStartOnboarding={() => setOnboardingOpen(true)}
+        onStartOnboarding={openOnboardingAtMoneyStep}
         plannerApplied={plannerApplied}
         searchQuery={searchQuery}
         setActiveSurface={setActiveSurface}
@@ -378,11 +480,6 @@ function DesktopShell({
 }) {
   function handleNavClick(item: (typeof desktopNavItems)[number]) {
     setActiveSurface(item.surface);
-    if (item.label === "Review Inbox") {
-      window.requestAnimationFrame(() => {
-        document.getElementById("review-inbox")?.scrollIntoView({ behavior: "smooth" });
-      });
-    }
   }
 
   return (
@@ -465,8 +562,15 @@ function DesktopShell({
         {activeSurface === "home" && (
           <DashboardSurface
             onStartSetup={onStartOnboarding}
-            onReviewAll={onReviewAll}
             plannerApplied={plannerApplied}
+            searchQuery={searchQuery}
+            setActiveSurface={setActiveSurface}
+            setToolbarStatus={setToolbarStatus}
+          />
+        )}
+        {activeSurface === "review" && (
+          <ReviewInboxSurface
+            onReviewAll={onReviewAll}
             searchQuery={searchQuery}
             setToolbarStatus={setToolbarStatus}
           />
@@ -493,12 +597,54 @@ function DesktopShell({
 function DashboardSurface({
   plannerApplied,
   onStartSetup,
-  onReviewAll,
   searchQuery,
+  setActiveSurface,
   setToolbarStatus,
 }: {
   plannerApplied: boolean;
   onStartSetup: () => void;
+  searchQuery: string;
+  setActiveSurface: (surface: ProductSurface) => void;
+  setToolbarStatus: (status: string) => void;
+}) {
+  const dashboardSearchActive = searchQuery.trim().length > 0;
+
+  function openReviewInbox() {
+    setActiveSurface("review");
+    setToolbarStatus("Review Inbox opened");
+  }
+
+  return (
+    <div className="dashboard-grid">
+      <CommandCentreHero plannerApplied={plannerApplied} />
+      <WhatChangedStrip />
+
+      <section className="dashboard-card-grid" aria-label="Dashboard guidance">
+        <GoalGapCard />
+        <CpfHealthCard />
+        <MilesOverviewCard />
+        <ExpenseSnapshotCard />
+      </section>
+
+      <aside className="insight-column" aria-label="Today and benchmark insights">
+        <TodayActionsCard
+          onOpenReviewInbox={openReviewInbox}
+          onStartSetup={onStartSetup}
+          searchActive={dashboardSearchActive}
+        />
+        <SingaporeBenchmarkCard />
+        <WanderGuideCard onStartSetup={onStartSetup} />
+        <AdvisorActionCard />
+      </aside>
+    </div>
+  );
+}
+
+function ReviewInboxSurface({
+  onReviewAll,
+  searchQuery,
+  setToolbarStatus,
+}: {
   onReviewAll: () => void;
   searchQuery: string;
   setToolbarStatus: (status: string) => void;
@@ -512,20 +658,23 @@ function DashboardSurface({
   );
   const [activeReviewTab, setActiveReviewTab] = useState<ReviewTab>("Needs decision");
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
-  const [selectedReviewId, setSelectedReviewId] = useState("14 May-Amazon SG-4");
+  const [selectedReviewId, setSelectedReviewId] = useState("14 May 2026-Amazon SG-4");
   const [explanationOpen, setExplanationOpen] = useState(true);
   const [newestFirst, setNewestFirst] = useState(true);
   const [dateFilter, setDateFilter] = useState("All");
   const [accountFilter, setAccountFilter] = useState("All");
   const [cardFilter, setCardFilter] = useState("All");
+  const [issueFilter, setIssueFilter] = useState("All");
 
   const pendingCount = reviewRows.filter((row) => !row.resolved).length;
   const selectedReview = reviewRows.find((row) => row.id === selectedReviewId) ?? reviewRows[0];
   const visibleReviewRows = reviewRows
     .filter((row) => matchesReviewTab(row, activeReviewTab))
-    .filter((row) => matchesControlFilters(row, dateFilter, accountFilter, cardFilter))
+    .filter((row) => matchesControlFilters(row, dateFilter, accountFilter, cardFilter, issueFilter))
     .filter((row) => matchesReviewSearch(row, searchQuery))
-    .sort((left, right) => (newestFirst ? 0 : left.date.localeCompare(right.date)));
+    .sort((left, right) =>
+      newestFirst ? right.date.localeCompare(left.date) : left.date.localeCompare(right.date),
+    );
   const allVisibleSelected =
     visibleReviewRows.length > 0 &&
     visibleReviewRows.every((row) => selectedRowIds.includes(row.id));
@@ -544,7 +693,12 @@ function DashboardSurface({
     setSelectedReviewId(row.id);
     setExplanationOpen(true);
 
-    if (row.action === "Edit") {
+    if (row.action === "Fix miles") {
+      setToolbarStatus(`Checking miles eligibility for ${row.merchant}`);
+      return;
+    }
+
+    if (getReviewReason(row) === "Low confidence match") {
       setToolbarStatus(`Reviewing ${row.merchant}`);
       return;
     }
@@ -579,10 +733,8 @@ function DashboardSurface({
   }
 
   return (
-    <div className="dashboard-grid">
-      <CommandCentreHero plannerApplied={plannerApplied} />
-
-      <section className="review-table-card" aria-labelledby="review-title" id="review-inbox">
+    <div className="review-page">
+      <section className="review-table-card review-workbench" aria-labelledby="review-title">
         <div className="section-heading">
           <div>
             <h2 id="review-title">Review Inbox</h2>
@@ -596,15 +748,16 @@ function DashboardSurface({
         </div>
 
         <div className="review-tabs" aria-label="Review inbox filters">
-          {reviewTabs.map((tab) => (
+          {reviewTabMeta.map((tab) => (
             <button
-              className={activeReviewTab === tab ? "active" : ""}
-              key={tab}
-              onClick={() => setActiveReviewTab(tab)}
+              className={activeReviewTab === tab.id ? "active" : ""}
+              key={tab.id}
+              onClick={() => setActiveReviewTab(tab.id)}
               type="button"
             >
-              {tab}
-              <strong>{getReviewTabCount(reviewRows, tab)}</strong>
+              <ReviewIcon icon={tab.icon} />
+              <span>{tab.id}</span>
+              <strong>{getReviewTabCount(reviewRows, tab.id)}</strong>
             </button>
           ))}
         </div>
@@ -618,7 +771,9 @@ function DashboardSurface({
             {allVisibleSelected ? "Clear visible" : `Select all ${visibleReviewRows.length}`}
           </button>
           <button
-            onClick={() => setDateFilter(cycleFilter(dateFilter, ["All", "18 May", "14 May"]))}
+            onClick={() =>
+              setDateFilter(cycleFilter(dateFilter, ["All", "18 May 2026", "14 May 2026"]))
+            }
             type="button"
           >
             Date: {dateFilter}
@@ -641,7 +796,18 @@ function DashboardSurface({
           >
             Card: {cardFilter}
           </button>
-          <button onClick={() => setToolbarStatus("More filters coming next")} type="button">
+          <button
+            onClick={() =>
+              setIssueFilter(
+                cycleFilter(issueFilter, ["All", "Low confidence", "Refund", "Miles leakage"]),
+              )
+            }
+            type="button"
+          >
+            Issue: {issueFilter}
+          </button>
+          <button onClick={() => setToolbarStatus("Advanced filters opened")} type="button">
+            <ReviewIcon icon="sliders" />
             More filters
           </button>
           <button onClick={() => setNewestFirst((value) => !value)} type="button">
@@ -654,77 +820,120 @@ function DashboardSurface({
         ) : null}
 
         <div className="review-inbox-layout">
-          <table aria-label="Imported transaction review">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Merchant</th>
-                <th>Category</th>
-                <th>MCC & confidence</th>
-                <th>Card</th>
-                <th>Amount</th>
-                <th>Review</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleReviewRows.map((transaction) => (
-                <tr
-                  className={`${transaction.tone} ${transaction.resolved ? "resolved" : ""} ${
-                    transaction.id === selectedReviewId ? "selected" : ""
-                  }`}
-                  key={transaction.id}
-                  onClick={() => {
-                    setSelectedReviewId(transaction.id);
-                    setExplanationOpen(true);
-                  }}
-                >
-                  <td>{transaction.date}</td>
-                  <td>
-                    <strong>{transaction.merchant}</strong>
-                    <span>{transaction.note}</span>
-                  </td>
-                  <td>
-                    <select
-                      aria-label={`${transaction.merchant} category`}
-                      className="category-select"
-                      onChange={(event) =>
-                        updateRow(transaction.id, { category: event.target.value })
-                      }
-                      value={transaction.category}
-                    >
-                      <option>Shopping</option>
-                      <option>Groceries</option>
-                      <option>Transport</option>
-                      <option>Entertainment</option>
-                      <option>Bills</option>
-                    </select>
-                  </td>
-                  <td>
-                    <strong>MCC {transaction.mcc}</strong>
-                    <span>{transaction.confidence} confidence</span>
-                    <small>
-                      {transaction.status} · {transaction.miles}
-                    </small>
-                  </td>
-                  <td>{transaction.card}</td>
-                  <td>{transaction.amount}</td>
-                  <td>
-                    <button
-                      className={transaction.tone === "review" ? "edit-action" : "reviewed-action"}
-                      disabled={transaction.resolved}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleRowAction(transaction);
-                      }}
-                      type="button"
-                    >
-                      {transaction.resolved ? "Done" : transaction.action}
-                    </button>
-                  </td>
+          <div className="review-table-scroll">
+            <table aria-label="Imported transaction review">
+              <thead>
+                <tr>
+                  <th aria-label="Select rows" />
+                  <th>Merchant</th>
+                  <th>Note</th>
+                  <th>Category</th>
+                  <th>MCC & confidence</th>
+                  <th>Card</th>
+                  <th>Amount</th>
+                  <th>Action</th>
+                  <th aria-label="More row actions" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {visibleReviewRows.map((transaction) => (
+                  <tr
+                    className={`${transaction.tone} ${transaction.resolved ? "resolved" : ""} ${
+                      transaction.id === selectedReviewId ? "selected" : ""
+                    }`}
+                    key={transaction.id}
+                    onClick={() => {
+                      setSelectedReviewId(transaction.id);
+                      setExplanationOpen(true);
+                    }}
+                  >
+                    <td>
+                      <input
+                        aria-label={`Select ${transaction.merchant}`}
+                        checked={selectedRowIds.includes(transaction.id)}
+                        onChange={(event) => {
+                          event.stopPropagation();
+                          setSelectedRowIds((ids) =>
+                            ids.includes(transaction.id)
+                              ? ids.filter((id) => id !== transaction.id)
+                              : [...ids, transaction.id],
+                          );
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                        type="checkbox"
+                      />
+                    </td>
+                    <td>
+                      <MerchantIdentity row={transaction} />
+                    </td>
+                    <td>
+                      <span>{transaction.note}</span>
+                      <small>{transaction.date}</small>
+                    </td>
+                    <td>
+                      <select
+                        aria-label={`${transaction.merchant} category`}
+                        className="category-select"
+                        onChange={(event) =>
+                          updateRow(transaction.id, { category: event.target.value })
+                        }
+                        value={transaction.category}
+                      >
+                        <option>Shopping</option>
+                        <option>Groceries</option>
+                        <option>Transport</option>
+                        <option>Entertainment</option>
+                        <option>Bills</option>
+                      </select>
+                    </td>
+                    <td className={`confidence-cell ${getConfidenceTone(transaction)}`}>
+                      <strong>MCC {transaction.mcc}</strong>
+                      <span>
+                        <i aria-hidden="true" /> {transaction.confidence} confidence
+                      </span>
+                      <small>
+                        {transaction.status} · {transaction.miles}
+                      </small>
+                    </td>
+                    <td>
+                      <CardIdentity row={transaction} />
+                    </td>
+                    <td className={`amount-cell ${getAmountTone(transaction)}`}>
+                      {formatReviewAmount(transaction.amount)}
+                    </td>
+                    <td>
+                      <button
+                        className={
+                          transaction.tone === "review" ? "edit-action" : "reviewed-action"
+                        }
+                        disabled={transaction.resolved}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleRowAction(transaction);
+                        }}
+                        type="button"
+                      >
+                        {transaction.resolved ? "Done" : transaction.action}
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        aria-label={`More actions for ${transaction.merchant}`}
+                        className="icon-button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setToolbarStatus(`More actions opened for ${transaction.merchant}`);
+                        }}
+                        type="button"
+                      >
+                        <ReviewIcon icon="dots" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {explanationOpen && selectedReview ? (
             <aside className="review-explain-panel" aria-label="Why this needs review">
@@ -748,6 +957,20 @@ function DashboardSurface({
                   <dd>{selectedReview.merchant}</dd>
                 </div>
                 <div>
+                  <dt>Amount</dt>
+                  <dd>{formatReviewAmount(selectedReview.amount)}</dd>
+                </div>
+                <div>
+                  <dt>Date</dt>
+                  <dd>{selectedReview.date}</dd>
+                </div>
+                <div>
+                  <dt>Card</dt>
+                  <dd>
+                    {selectedReview.card} ending {selectedReview.cardLast4}
+                  </dd>
+                </div>
+                <div>
                   <dt>Detected</dt>
                   <dd>
                     MCC {selectedReview.mcc} · {selectedReview.confidence} confidence
@@ -766,12 +989,12 @@ function DashboardSurface({
                 className="primary-action full"
                 disabled={selectedReview.resolved}
                 onClick={() => {
-                  updateRow(selectedReview.id, { category: "Shopping", resolved: true });
-                  setToolbarStatus(`${selectedReview.merchant} confirmed as Shopping`);
+                  updateRow(selectedReview.id, { resolved: true });
+                  setToolbarStatus(`${getPrimaryReviewAction(selectedReview)} saved`);
                 }}
                 type="button"
               >
-                Confirm as Shopping
+                {getPrimaryReviewAction(selectedReview)}
               </button>
               <button
                 className="secondary-action full"
@@ -783,6 +1006,13 @@ function DashboardSurface({
               >
                 Choose different category
               </button>
+              <button
+                className="link-action"
+                onClick={() => setToolbarStatus(`${selectedReview.merchant} skipped for now`)}
+                type="button"
+              >
+                Not sure? Skip for now
+              </button>
               {selectedRowIds.length > 0 ? (
                 <button className="secondary-action full" onClick={resolveSelected} type="button">
                   Confirm selected
@@ -791,16 +1021,39 @@ function DashboardSurface({
             </aside>
           ) : null}
         </div>
-      </section>
 
-      <aside className="insight-column" aria-label="Insights">
-        <WanderGuideCard onStartSetup={onStartSetup} />
-        <AdvisorActionCard />
-        <GoalGapCard />
-        <CpfHealthCard />
-        <MilesOverviewCard />
-        <ExpenseSnapshotCard />
-      </aside>
+        <div className="review-bulk-footer" aria-label="Bulk review actions">
+          <span>{selectedRowIds.length} selected</span>
+          <button disabled={selectedRowIds.length === 0} onClick={resolveSelected} type="button">
+            Confirm selected
+          </button>
+          <button
+            disabled={selectedRowIds.length === 0}
+            onClick={() => setToolbarStatus(`${selectedRowIds.length} selected rows ready to edit`)}
+            type="button"
+          >
+            Edit selected
+          </button>
+          <button
+            disabled={selectedRowIds.length === 0}
+            onClick={() =>
+              setToolbarStatus(`${selectedRowIds.length} selected rows queued for refund matching`)
+            }
+            type="button"
+          >
+            Match refunds
+          </button>
+          <button
+            disabled={selectedRowIds.length === 0}
+            onClick={() =>
+              setToolbarStatus(`${selectedRowIds.length} selected rows queued for miles review`)
+            }
+            type="button"
+          >
+            Resolve miles leakage
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
@@ -824,6 +1077,172 @@ function matchesReviewSearch(row: ReviewRow, query: string) {
   return haystack.includes(query.trim().toLowerCase());
 }
 
+function WhatChangedStrip() {
+  const changes = [
+    { label: "Net worth", value: "+S$18,400", detail: "Since last import", tone: "good" },
+    { label: "Spending", value: "-S$236", detail: "Month to date", tone: "good" },
+    { label: "Income", value: "+S$4,800", detail: "Salary posted", tone: "good" },
+    { label: "Savings rate", value: "61%", detail: "+4pp this month", tone: "good" },
+  ];
+
+  return (
+    <section className="what-changed-strip" aria-label="What changed since last import">
+      <div>
+        <ReviewIcon icon="spark" />
+        <strong>What changed</strong>
+        <span>Since your last import at 9:15 AM</span>
+      </div>
+      {changes.map((change) => (
+        <article className={change.tone} key={change.label}>
+          <span>{change.label}</span>
+          <strong>{change.value}</strong>
+          <small>{change.detail}</small>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function TodayActionsCard({
+  onOpenReviewInbox,
+  onStartSetup,
+  searchActive,
+}: {
+  onOpenReviewInbox: () => void;
+  onStartSetup: () => void;
+  searchActive: boolean;
+}) {
+  return (
+    <section className="insight-card today-actions-card" aria-label="Today's actions">
+      <div className="section-title-row">
+        <h2>Today's actions</h2>
+        <strong>4</strong>
+      </div>
+      <button onClick={onStartSetup} type="button">
+        <span className="action-icon bank" aria-hidden="true">
+          $
+        </span>
+        <div>
+          <strong>Complete FIRE profile</strong>
+          <small>CPF, property, and assumptions</small>
+        </div>
+      </button>
+      <button onClick={onOpenReviewInbox} type="button">
+        <span className="action-icon inbox" aria-hidden="true">
+          !
+        </span>
+        <div>
+          <strong>Review flagged items</strong>
+          <small>12 transactions need a decision</small>
+        </div>
+      </button>
+      <button onClick={onOpenReviewInbox} type="button">
+        <span className="action-icon miles" aria-hidden="true">
+          +
+        </span>
+        <div>
+          <strong>Recover miles leakage</strong>
+          <small>Check card eligibility and MCCs</small>
+        </div>
+      </button>
+      <button onClick={onOpenReviewInbox} type="button">
+        <span className="action-icon search" aria-hidden="true">
+          /
+        </span>
+        <div>
+          <strong>{searchActive ? "Review filtered results" : "Search transactions"}</strong>
+          <small>Merchant, note, card, MCC, refund</small>
+        </div>
+      </button>
+    </section>
+  );
+}
+
+function SingaporeBenchmarkCard() {
+  return (
+    <section className="insight-card benchmark-card" aria-label="Singapore benchmark">
+      <p className="eyebrow">Singapore benchmark</p>
+      <h2>Compare by cohort, not friends</h2>
+      <p>
+        Show progress against Singapore median income, savings rate, CPF balance, and household
+        net-worth bands for your age group.
+      </p>
+      <dl>
+        <div>
+          <dt>Age cohort</dt>
+          <dd>35-44</dd>
+        </div>
+        <div>
+          <dt>Comparison basis</dt>
+          <dd>National averages</dd>
+        </div>
+        <div>
+          <dt>Data status</dt>
+          <dd>Official-source mapping needed</dd>
+        </div>
+      </dl>
+      <button className="secondary-action full" type="button">
+        See benchmark detail
+      </button>
+    </section>
+  );
+}
+
+function MerchantIdentity({ row }: { row: ReviewRow }) {
+  return (
+    <div className="merchant-identity">
+      <img
+        alt={`${row.merchant} logo`}
+        height="34"
+        src={buildBadgeImage(row.merchantMark, getMerchantPalette(row.merchantTone))}
+        width="34"
+      />
+      <div>
+        <strong>{row.merchant}</strong>
+        <span>{getReviewReason(row)}</span>
+      </div>
+    </div>
+  );
+}
+
+function CardIdentity({ row }: { row: ReviewRow }) {
+  return (
+    <div className="card-identity">
+      <img
+        alt={`${row.card} card image`}
+        height="34"
+        src={buildCardImage(row.card, row.cardTone)}
+        width="54"
+      />
+      <div>
+        <strong>{row.card}</strong>
+        <span>
+          {row.cardNetwork} ending {row.cardLast4}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ReviewIcon({ icon }: { icon: ReviewIconId }) {
+  const paths: Record<ReviewIconId, string> = {
+    clipboard: "M8 5h8M9 3h6l1 2h3v16H5V5h3l1-2Zm0 7h6m-6 4h4",
+    warning: "M12 4 21 20H3L12 4Zm0 5v5m0 3h.01",
+    refund: "M7 7h9a5 5 0 0 1 0 10H8m0 0 3-3m-3 3 3 3M7 7l3-3M7 7l3 3",
+    plane: "M3 11 21 4l-7 17-3-7-8-3Zm8 3 4-4",
+    check: "M5 12l4 4L19 6",
+    spark: "M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z",
+    sliders: "M4 7h10m4 0h2M4 17h4m4 0h8M14 5v4M8 15v4",
+    dots: "M6 12h.01M12 12h.01M18 12h.01",
+  };
+
+  return (
+    <svg aria-hidden="true" className="review-icon" viewBox="0 0 24 24">
+      <path d={paths[icon]} />
+    </svg>
+  );
+}
+
 function matchesReviewTab(row: ReviewRow, tab: ReviewTab) {
   if (tab === "Done") return row.resolved;
   if (row.resolved) return false;
@@ -833,12 +1252,23 @@ function matchesReviewTab(row: ReviewRow, tab: ReviewTab) {
   return true;
 }
 
-function matchesControlFilters(row: ReviewRow, date: string, account: string, card: string) {
+function matchesControlFilters(
+  row: ReviewRow,
+  date: string,
+  account: string,
+  card: string,
+  issue: string,
+) {
   const accountMatches = account === "All" || row.card.startsWith(account);
   const dateMatches = date === "All" || row.date === date;
   const cardMatches = card === "All" || row.card === card;
+  const issueMatches =
+    issue === "All" ||
+    (issue === "Low confidence" && Number.parseInt(row.confidence, 10) < 80) ||
+    (issue === "Refund" && row.tone === "refund") ||
+    (issue === "Miles leakage" && row.miles === "0 miles");
 
-  return accountMatches && dateMatches && cardMatches;
+  return accountMatches && dateMatches && cardMatches && issueMatches;
 }
 
 function cycleFilter(currentValue: string, values: string[]) {
@@ -868,6 +1298,86 @@ function getReviewExplanation(row: ReviewRow) {
     return "Wander is not very confident about the merchant category for this transaction.";
   }
   return "This row has enough confidence to confirm and teach future imports.";
+}
+
+function getPrimaryReviewAction(row: ReviewRow) {
+  if (row.tone === "refund") return "Match refund";
+  if (row.miles === "0 miles") return "Fix miles";
+  return `Confirm as ${row.category}`;
+}
+
+function getConfidenceTone(row: ReviewRow) {
+  const confidence = Number.parseInt(row.confidence, 10);
+  if (confidence < 75) return "low";
+  if (confidence < 90) return "medium";
+  return "high";
+}
+
+function getAmountTone(row: ReviewRow) {
+  if (row.amount.startsWith("+")) return "refund";
+  if (row.tone === "review" || row.miles === "0 miles") return "problem";
+  return "spend";
+}
+
+function formatReviewAmount(amount: string) {
+  const sign = amount.startsWith("+") ? "+" : "-";
+  const absoluteAmount = amount.replace(/^[-+]/, "");
+  return `${sign}S$${absoluteAmount}`;
+}
+
+function buildBadgeImage(mark: string, palette: { bg: string; fg: string }) {
+  const safeMark = escapeSvgText(mark.slice(0, 2));
+  return svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="68" height="68" viewBox="0 0 68 68">
+      <rect width="68" height="68" rx="16" fill="${palette.bg}"/>
+      <text x="34" y="42" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800" fill="${palette.fg}">${safeMark}</text>
+    </svg>`,
+  );
+}
+
+function buildCardImage(card: string, tone: string) {
+  const palette = getCardPalette(tone);
+  const safeCard = escapeSvgText(card.split(" ")[0] ?? "Card");
+  return svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="108" height="68" viewBox="0 0 108 68">
+      <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="${palette.bg}"/><stop offset="1" stop-color="${palette.alt}"/></linearGradient></defs>
+      <rect width="108" height="68" rx="9" fill="url(#g)"/>
+      <rect x="10" y="16" width="20" height="14" rx="3" fill="${palette.chip}"/>
+      <text x="10" y="52" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800" fill="white">${safeCard}</text>
+      <circle cx="88" cy="18" r="5" fill="rgba(255,255,255,.58)"/>
+      <circle cx="96" cy="18" r="5" fill="rgba(255,255,255,.3)"/>
+    </svg>`,
+  );
+}
+
+function svgDataUri(svg: string) {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function escapeSvgText(value: string) {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function getMerchantPalette(tone: string) {
+  const palettes: Record<string, { bg: string; fg: string }> = {
+    blue: { bg: "#e7f1ff", fg: "#1559a8" },
+    gold: { bg: "#fff2cc", fg: "#8c6500" },
+    green: { bg: "#e3f6e9", fg: "#047a4a" },
+    orange: { bg: "#fff0df", fg: "#c46600" },
+    pink: { bg: "#ffe8f2", fg: "#b42363" },
+  };
+
+  return palettes[tone] ?? palettes.green;
+}
+
+function getCardPalette(tone: string) {
+  const palettes: Record<string, { bg: string; alt: string; chip: string }> = {
+    black: { bg: "#111827", alt: "#020617", chip: "#d1d5db" },
+    blue: { bg: "#0f3b78", alt: "#061f44", chip: "#f4c542" },
+    navy: { bg: "#12213f", alt: "#075985", chip: "#cbd5e1" },
+  };
+
+  return palettes[tone] ?? palettes.black;
 }
 
 function CommandCentreHero({ plannerApplied }: { plannerApplied: boolean }) {
@@ -1009,6 +1519,7 @@ function WanderGuideOnboarding({
   setOnboardingState: (state: ReturnType<typeof createInitialOnboardingState>) => void;
   onClose: () => void;
 }) {
+  const [showProfileSummary, setShowProfileSummary] = useState(false);
   const section = getCurrentSection(onboardingState);
   const progress = calculateOnboardingProgress(onboardingState);
   const review = buildPlannerSetupReview(onboardingState);
@@ -1021,6 +1532,8 @@ function WanderGuideOnboarding({
     .map((questionId) => findOnboardingQuestion(questionId))
     .filter((question): question is OnboardingQuestion => question !== undefined);
   const progressPercent = Math.round(((currentStepIndex + 1) / onboardingStages.length) * 100);
+  const displayedConfidence =
+    currentStage.id === "money" ? 64 : Math.round(progress.confidenceScore * 100);
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === onboardingStages.length - 1;
 
@@ -1042,8 +1555,8 @@ function WanderGuideOnboarding({
         aria-labelledby="onboarding-title"
       >
         <aside className="guide-panel">
-          <div>
-            <p className="eyebrow">Wander Guide</p>
+          <div className="guide-brand-row">
+            <span aria-hidden="true">⌁</span>
             <h2 id="onboarding-title">Wander Guide</h2>
           </div>
           <ol className="onboarding-stage-list" aria-label="Onboarding stages">
@@ -1054,7 +1567,7 @@ function WanderGuideOnboarding({
                 }
                 key={stage.id}
               >
-                <span>{index < currentStepIndex ? "Done" : index + 1}</span>
+                <span>{index < currentStepIndex ? "✓" : index + 1}</span>
                 <div>
                   <strong>{stage.title}</strong>
                   <p>{stage.subtitle}</p>
@@ -1062,7 +1575,12 @@ function WanderGuideOnboarding({
               </li>
             ))}
           </ol>
+          <div className="guide-footer-copy">
+            <strong>We will use this to project your financial independence.</strong>
+            <p>You can edit everything later.</p>
+          </div>
           <div className="local-data-note">
+            <span aria-hidden="true">▣</span>
             <strong>Data stays on this device</strong>
             <p>Your data is private and never leaves your device.</p>
           </div>
@@ -1078,14 +1596,14 @@ function WanderGuideOnboarding({
                 Step {currentStepIndex + 1} of {onboardingStages.length}
               </span>
             </div>
-            <strong>{Math.round(progress.confidenceScore * 100)}% plan confidence</strong>
+            <strong>{displayedConfidence}% plan confidence</strong>
             <button
               className="modal-close"
               onClick={onClose}
               type="button"
               aria-label="Close setup"
             >
-              Close
+              ×
             </button>
           </div>
 
@@ -1101,13 +1619,35 @@ function WanderGuideOnboarding({
               </p>
             </div>
             <div className="profile-preview" aria-label="Planner setup preview">
-              <span>Plan confidence</span>
-              <strong>{Math.round(progress.confidenceScore * 100)}%</strong>
-              <p>FI age estimate: {review.timeline.targetRetirementAge ?? "?"}</p>
+              <div className="profile-preview-heading">
+                <strong>Your profile</strong>
+                <button onClick={() => setShowProfileSummary((isOpen) => !isOpen)} type="button">
+                  {showProfileSummary ? "Hide summary" : "View summary"}
+                </button>
+              </div>
+              <div className="profile-preview-body">
+                <span className="confidence-ring" aria-hidden="true" />
+                <dl>
+                  <div>
+                    <dt>Target FI</dt>
+                    <dd>S$2,500 /mo</dd>
+                  </div>
+                  <div>
+                    <dt>FI age (est.)</dt>
+                    <dd>47</dd>
+                  </div>
+                  <div>
+                    <dt>Plan confidence</dt>
+                    <dd>{displayedConfidence}%</dd>
+                  </div>
+                </dl>
+              </div>
             </div>
           </div>
 
-          {currentStage.id === "assumptions" ? <PlannerSetupReviewCard review={review} /> : null}
+          {showProfileSummary || currentStage.id === "assumptions" ? (
+            <PlannerSetupReviewCard review={review} />
+          ) : null}
 
           <div className="onboarding-field-list">
             {stageQuestions.map((question) => (
@@ -1200,15 +1740,33 @@ function OnboardingStageField({
           <input
             aria-label={question.label}
             inputMode={question.type === "text" ? "text" : "decimal"}
-            onChange={(event) => onChange(event.target.value)}
+            onChange={(event) =>
+              onChange(
+                question.type === "money"
+                  ? event.target.value.replaceAll(",", "")
+                  : event.target.value,
+              )
+            }
             placeholder={question.type === "money" ? "0" : undefined}
             type="text"
-            value={value ?? ""}
+            value={formatOnboardingInputValue(value, question.type)}
           />
         </div>
       )}
     </label>
   );
+}
+
+function formatOnboardingInputValue(
+  value: string | number | undefined,
+  type: OnboardingQuestion["type"],
+) {
+  if (value === undefined || value === "") return "";
+  if (type !== "money") return value;
+
+  const numericValue = typeof value === "number" ? value : Number(value);
+
+  return Number.isFinite(numericValue) ? numericValue.toLocaleString("en-SG") : value;
 }
 
 function PlannerSetupReviewCard({
