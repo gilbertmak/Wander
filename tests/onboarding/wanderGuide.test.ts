@@ -6,6 +6,7 @@ import {
   calculateOnboardingProgress,
   completeCurrentSection,
   createInitialOnboardingState,
+  goToPreviousSection,
   getCurrentSection,
   onboardingSections,
   skipCurrentSection,
@@ -55,6 +56,17 @@ describe("Wander Guide onboarding", () => {
     expect(state.skippedSectionIds).toEqual(["fire_life"]);
   });
 
+  it("moves back through the bundled flow without changing answers", () => {
+    let state = createInitialOnboardingState();
+    state = answerOnboardingQuestion(state, "currentAge", 36);
+    state = completeCurrentSection(state);
+
+    state = goToPreviousSection(state);
+
+    expect(state.currentSectionId).toBe("timeline");
+    expect(state.answers.currentAge).toBe(36);
+  });
+
   it("builds a structured planner setup review from answers", () => {
     let state = createInitialOnboardingState();
     state = answerOnboardingQuestion(state, "currentAge", 36);
@@ -65,7 +77,6 @@ describe("Wander Guide onboarding", () => {
     state = answerOnboardingQuestion(state, "cpfOa", 60_000);
     state = answerOnboardingQuestion(state, "cpfSa", 80_000);
     state = answerOnboardingQuestion(state, "cpfMa", 30_000);
-    state = answerOnboardingQuestion(state, "primaryGoal", "Emergency fund");
 
     const review = buildPlannerSetupReview(state);
 
@@ -78,12 +89,12 @@ describe("Wander Guide onboarding", () => {
       monthlySavingsMinor: 450_000,
       liquidAssetsMinor: 25_000_000,
       cpfTotalMinor: 17_000_000,
-      primaryGoal: "Emergency fund",
     });
     expect(review.missingRequiredQuestionIds).toContain("fireLifestyle");
   });
 
   it("keeps the preview as the last section", () => {
     expect(onboardingSections.at(-1)?.id).toBe("preview");
+    expect(onboardingSections.map((section) => section.id)).not.toContain("goals");
   });
 });

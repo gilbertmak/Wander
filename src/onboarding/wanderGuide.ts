@@ -6,7 +6,6 @@ export type OnboardingSectionId =
   | "cpf"
   | "property"
   | "healthcare"
-  | "goals"
   | "risk"
   | "preview";
 
@@ -56,7 +55,6 @@ export type PlannerSetupReview = {
   monthlySavingsMinor?: number;
   liquidAssetsMinor?: number;
   cpfTotalMinor?: number;
-  primaryGoal?: string;
   confidenceScore: number;
   missingRequiredQuestionIds: string[];
 };
@@ -65,7 +63,7 @@ export const onboardingSections: OnboardingSection[] = [
   {
     id: "timeline",
     title: "Your timeline",
-    guidePrompt: "Let us anchor the plan in time first. A FIRE date without ages is theatre.",
+    guidePrompt: "Let us anchor the plan in time first so every projection has a clear starting point.",
     questions: [
       {
         id: "currentAge",
@@ -93,7 +91,7 @@ export const onboardingSections: OnboardingSection[] = [
   {
     id: "fire_life",
     title: "Your FIRE life",
-    guidePrompt: "Now define the life we are trying to fund, not just a number to chase.",
+    guidePrompt: "Now define the monthly life the plan needs to support.",
     questions: [
       {
         id: "fireLifestyle",
@@ -150,7 +148,7 @@ export const onboardingSections: OnboardingSection[] = [
   {
     id: "monthly_engine",
     title: "Your monthly engine",
-    guidePrompt: "This tells us how quickly the plan can move without heroic assumptions.",
+    guidePrompt: "This tells us how quickly the plan can move using your normal monthly cash flow.",
     questions: [
       {
         id: "annualIncome",
@@ -206,8 +204,7 @@ export const onboardingSections: OnboardingSection[] = [
   {
     id: "property",
     title: "Property",
-    guidePrompt:
-      "Housing can be a home, an asset, a liability, or all three. Annoying, but useful.",
+    guidePrompt: "Housing can affect cash flow, equity, and the timing of your FIRE plan.",
     questions: [
       {
         id: "homeValue",
@@ -235,7 +232,7 @@ export const onboardingSections: OnboardingSection[] = [
   {
     id: "healthcare",
     title: "Healthcare",
-    guidePrompt: "Healthcare assumptions keep the retirement spending estimate less flimsy.",
+    guidePrompt: "Healthcare assumptions help the retirement spending estimate stay realistic.",
     questions: [
       {
         id: "annualPremium",
@@ -254,39 +251,9 @@ export const onboardingSections: OnboardingSection[] = [
     ],
   },
   {
-    id: "goals",
-    title: "Goals",
-    guidePrompt: "A retirement plan has to make room for life before retirement too.",
-    questions: [
-      {
-        id: "primaryGoal",
-        label: "Most important goal",
-        helper: "Emergency fund, home, education, travel, parent support, or custom.",
-        type: "select",
-        required: true,
-        options: ["Emergency fund", "Home", "Education", "Travel", "Parent support", "Custom"],
-      },
-      {
-        id: "primaryGoalAmount",
-        label: "Goal amount",
-        helper: "Target amount to fund this goal.",
-        type: "money",
-        required: true,
-      },
-      {
-        id: "primaryGoalYear",
-        label: "Target year",
-        helper: "When you want this funded.",
-        type: "number",
-        required: true,
-      },
-    ],
-  },
-  {
     id: "risk",
     title: "Risk comfort",
-    guidePrompt:
-      "Return assumptions need a temperament check. Future you has to live with the ride.",
+    guidePrompt: "Return assumptions should match the level of volatility you can accept.",
     questions: [
       {
         id: "portfolioStyle",
@@ -367,6 +334,16 @@ export function skipCurrentSection(state: OnboardingState): OnboardingState {
   };
 }
 
+export function goToPreviousSection(state: OnboardingState): OnboardingState {
+  const currentIndex = getSectionIndex(state.currentSectionId);
+  const previousSection = onboardingSections[Math.max(currentIndex - 1, 0)];
+
+  return {
+    ...state,
+    currentSectionId: previousSection.id,
+  };
+}
+
 export function calculateOnboardingProgress(state: OnboardingState): OnboardingProgress {
   const requiredQuestions = onboardingSections.flatMap((section) =>
     section.questions.filter((question) => question.required),
@@ -409,8 +386,6 @@ export function buildPlannerSetupReview(state: OnboardingState): PlannerSetupRev
     monthlySavingsMinor: toOptionalMoneyMinor(state.answers.monthlySavings),
     liquidAssetsMinor: toOptionalMoneyMinor(state.answers.liquidAssets),
     cpfTotalMinor,
-    primaryGoal:
-      typeof state.answers.primaryGoal === "string" ? state.answers.primaryGoal : undefined,
     confidenceScore: calculateOnboardingProgress(state).confidenceScore,
     missingRequiredQuestionIds,
   };

@@ -25,6 +25,12 @@ describe("App shell", () => {
     expect(within(desktop).getByRole("table", { name: "Imported transaction review" }));
     expect(within(desktop).getByText("Miles overview")).toBeInTheDocument();
     expect(within(desktop).getByText("Expense snapshot")).toBeInTheDocument();
+    expect(
+      within(desktop).queryByRole("button", { name: "Apply latest import" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(desktop).queryByRole("button", { name: "Why this plan?" }),
+    ).not.toBeInTheDocument();
   });
 
   it("makes desktop navigation and planner CTA visibly interactive", async () => {
@@ -33,7 +39,7 @@ describe("App shell", () => {
     const desktop = screen.getByLabelText("Wander desktop app");
     const nav = within(desktop).getByLabelText("Workspace sections");
 
-    await userEvent.click(within(nav).getByRole("button", { name: "Cards & miles" }));
+    await userEvent.click(within(nav).getByRole("button", { name: /Miles/i }));
 
     expect(
       within(desktop).getByRole("heading", { name: "72,000 redeemable miles" }),
@@ -67,29 +73,57 @@ describe("App shell", () => {
     const desktop = screen.getByLabelText("Wander desktop app");
     await userEvent.click(within(desktop).getByRole("button", { name: "Start guided setup" }));
 
-    expect(within(desktop).getByRole("heading", { name: "Wander Guide" })).toBeInTheDocument();
-    expect(within(desktop).getByRole("heading", { name: "Your timeline" })).toBeInTheDocument();
+    const modal = screen.getByRole("dialog", { name: "Wander Guide" });
+
+    expect(within(modal).getByRole("heading", { name: "Wander Guide" })).toBeInTheDocument();
+    expect(within(modal).getByRole("heading", { name: "Your life" })).toBeInTheDocument();
+    expect(within(modal).getByLabelText(/setup progress/i)).toBeInTheDocument();
+    expect(within(modal).queryByText(/required/i)).not.toBeInTheDocument();
+    expect(within(modal).queryByRole("button", { name: /Why am I/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Current age")).toHaveAttribute("type", "text");
 
     await userEvent.type(screen.getByLabelText("Current age"), "36");
     await userEvent.type(screen.getByLabelText("Target retirement age"), "45");
-    await userEvent.type(screen.getByLabelText("Planning age"), "90");
-    await userEvent.click(within(desktop).getByRole("button", { name: "Continue" }));
+    await userEvent.type(screen.getByLabelText("Expected monthly retirement spend"), "6000");
+    await userEvent.click(within(modal).getByRole("button", { name: "Continue" }));
 
-    expect(within(desktop).getByRole("heading", { name: "Your FIRE life" })).toBeInTheDocument();
-    expect(within(desktop).getByText(/Step 2 of 10/i)).toBeInTheDocument();
+    expect(within(modal).getByRole("heading", { name: "Your money today" })).toBeInTheDocument();
+    expect(within(modal).getByText(/Step 2 of 3/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Cash and liquid investments")).toBeInTheDocument();
+
+    await userEvent.click(within(modal).getByRole("button", { name: "Back" }));
+
+    expect(within(modal).getByRole("heading", { name: "Your life" })).toBeInTheDocument();
   });
 
-  it("opens and closes the explanation drawer from transaction actions", async () => {
+  it("uses the updated review inbox action model", async () => {
     render(<App />);
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Why this?" })[0]);
+    const desktop = screen.getByLabelText("Wander desktop app");
+    const table = within(desktop).getByRole("table", { name: "Imported transaction review" });
 
-    expect(screen.getByLabelText("Why this explanation")).toBeInTheDocument();
-    expect(screen.getByText(/refund_matcher, trust_score, reward_reversal/i)).toBeInTheDocument();
+    expect(within(table).queryByRole("columnheader", { name: "Issue" })).not.toBeInTheDocument();
+    expect(within(table).getAllByRole("button", { name: "Confirm" }).length).toBeGreaterThan(0);
+    expect(within(table).getByRole("button", { name: "Match refund" })).toBeInTheDocument();
+    expect(within(table).getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Shopee SG category")).toHaveClass("category-select");
+    expect(screen.getByLabelText("Why this needs review")).toBeInTheDocument();
+    expect(screen.getByLabelText("Search merchant, note, card, MCC, or refund")).toHaveAttribute(
+      "placeholder",
+      "Search merchant, note, card, MCC, or refund",
+    );
 
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await userEvent.click(within(table).getAllByRole("button", { name: "Confirm" })[0]);
 
-    expect(screen.queryByLabelText("Why this explanation")).not.toBeInTheDocument();
+    expect(screen.getByText("Confirm saved")).toBeInTheDocument();
+
+    await userEvent.type(
+      screen.getByLabelText("Search merchant, note, card, MCC, or refund"),
+      "amazon",
+    );
+
+    expect(within(table).getByText("Amazon SG")).toBeInTheDocument();
+    expect(within(table).queryByText("Cold Storage")).not.toBeInTheDocument();
   });
 
   it("saves a correction and reports recalculation triggers", async () => {

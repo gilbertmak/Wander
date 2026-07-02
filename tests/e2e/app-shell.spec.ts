@@ -11,17 +11,21 @@ test("desktop dashboard renders and primary buttons change state", async ({ page
   await expect(desktop.getByText("FIRE command centre")).toBeVisible();
   await expect(desktop.getByLabel("FIRE command cards")).toBeVisible();
   await expect(desktop.getByText("Advisor action")).toBeVisible();
+  await expect(desktop.getByRole("button", { name: "Apply latest import" })).toHaveCount(0);
+  await expect(desktop.getByRole("button", { name: "Why this plan?" })).toHaveCount(0);
 
-  await desktop.getByRole("button", { name: "Apply latest import" }).click();
-  await expect(desktop.getByRole("button", { name: "Planner updated" })).toBeVisible();
-
-  await desktop.getByRole("button", { name: "Why this?" }).first().click();
-  await expect(page.getByLabel("Why this explanation")).toBeVisible();
-  await page.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByLabel("Why this explanation")).toBeHidden();
+  await expect(desktop.getByRole("button", { name: "Confirm" }).first()).toBeVisible();
+  await expect(desktop.getByRole("button", { name: "Match refund" })).toBeVisible();
+  await expect(desktop.getByRole("button", { name: "Edit" })).toBeVisible();
+  await expect(desktop.getByRole("columnheader", { name: "Issue" })).toHaveCount(0);
+  await expect(desktop.getByLabel("Shopee SG category")).toBeVisible();
+  await expect(desktop.getByLabel("Why this needs review")).toBeVisible();
+  await expect(desktop.getByLabel("Search merchant, note, card, MCC, or refund")).toBeVisible();
 
   await desktop.getByLabel("Workspace sections").getByRole("button", { name: "Planner" }).click();
-  await expect(desktop.getByRole("heading", { name: "Current month applied" })).toBeVisible();
+  await expect(
+    desktop.getByRole("heading", { name: "Waiting for selected changes" }),
+  ).toBeVisible();
   await expect(desktop.getByLabel("Scenario stress testing")).toBeVisible();
 
   await desktop.getByLabel("Workspace sections").getByRole("button", { name: "Reports" }).click();
@@ -36,15 +40,20 @@ test("desktop setup opens Wander Guide onboarding", async ({ page }) => {
   const desktop = page.getByLabel("Wander desktop app");
 
   await desktop.getByRole("button", { name: "Start guided setup" }).click();
-  await expect(desktop.getByRole("heading", { name: "Wander Guide" })).toBeVisible();
-  await expect(desktop.getByRole("heading", { name: "Your timeline" })).toBeVisible();
+  const modal = page.getByRole("dialog", { name: "Wander Guide" });
+  await expect(modal).toBeVisible();
+  await expect(modal.getByRole("heading", { name: "Wander Guide" })).toBeVisible();
+  await expect(modal.getByRole("heading", { name: "Your life" })).toBeVisible();
+  await expect(modal.getByText("0/12 required")).toHaveCount(0);
 
   await page.getByLabel("Current age").fill("36");
   await page.getByLabel("Target retirement age").fill("45");
-  await page.getByLabel("Planning age").fill("90");
-  await desktop.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Expected monthly retirement spend").fill("6000");
+  await modal.getByRole("button", { name: "Continue" }).click();
 
-  await expect(desktop.getByRole("heading", { name: "Your FIRE life" })).toBeVisible();
+  await expect(modal.getByRole("heading", { name: "Your money today" })).toBeVisible();
+  await modal.getByRole("button", { name: "Back" }).click();
+  await expect(modal.getByRole("heading", { name: "Your life" })).toBeVisible();
 });
 
 test("mobile shell renders landing page and switches to cards", async ({ page }) => {

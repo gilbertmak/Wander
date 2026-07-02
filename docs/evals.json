@@ -2294,7 +2294,7 @@
         "type": "binary"
       },
       "automationLayer": "e2e-test",
-      "scenario": "Wander Guide asks bundled onboarding questions and converts answers into structured planner setup review data.",
+      "scenario": "Wander Guide opens as a dashboard modal, asks bundled onboarding questions, and converts answers into structured planner setup review data.",
       "input": {
         "sections": [
           "timeline",
@@ -2304,7 +2304,6 @@
           "cpf",
           "property",
           "healthcare",
-          "goals",
           "risk",
           "preview"
         ],
@@ -2315,14 +2314,16 @@
       },
       "expected": [
         "The first section asks current age, target retirement age, and planning age together.",
-        "The setup surface shows Wander Guide, progress, confidence, and a question bundle.",
+        "The setup opens in a modal with Wander Guide, a back control, a progress bar, confidence, and a question bundle.",
+        "The onboarding flow has no separate goals section.",
+        "Numeric and money onboarding fields render as text inputs rather than spinner controls.",
         "Required answers increase onboarding confidence.",
         "Final preview maps answers to structured planner setup values before persistence."
       ],
       "passCriteria": [
         "Onboarding unit tests pass.",
-        "App component tests verify the Setup flow advances from timeline to FIRE life.",
-        "Playwright verifies the desktop Setup flow opens and advances in browser."
+        "App component tests verify the modal advances from timeline to FIRE life and supports Back.",
+        "Playwright verifies the desktop modal opens and advances in browser."
       ]
     },
     {
