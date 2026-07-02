@@ -7,18 +7,29 @@ test("desktop dashboard renders and primary buttons change state", async ({ page
   const desktop = page.getByLabel("Wander desktop app");
 
   await expect(desktop.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await expect(desktop.getByRole("table", { name: "Imported transaction review" })).toBeVisible();
+  await expect(desktop.getByRole("table", { name: "Imported transaction review" })).toHaveCount(0);
   await expect(desktop.getByText("FIRE command centre")).toBeVisible();
   await expect(desktop.getByLabel("FIRE command cards")).toBeVisible();
+  await expect(desktop.getByLabel("What changed since last import")).toBeVisible();
+  await expect(desktop.getByLabel("Today's actions")).toBeVisible();
+  await expect(desktop.getByLabel("Singapore benchmark")).toBeVisible();
   await expect(desktop.getByText("Advisor action")).toBeVisible();
   await expect(desktop.getByRole("button", { name: "Apply latest import" })).toHaveCount(0);
   await expect(desktop.getByRole("button", { name: "Why this plan?" })).toHaveCount(0);
 
+  await desktop
+    .getByLabel("Workspace sections")
+    .getByRole("button", { name: /Review Inbox/ })
+    .click();
+  await expect(desktop.locator("h1")).toHaveText("Review Inbox");
+  await expect(desktop.getByRole("table", { name: "Imported transaction review" })).toBeVisible();
   await expect(desktop.getByRole("button", { name: "Confirm" }).first()).toBeVisible();
-  await expect(desktop.getByRole("button", { name: "Match refund" })).toBeVisible();
-  await expect(desktop.getByRole("button", { name: "Edit" })).toBeVisible();
+  await expect(desktop.getByRole("button", { name: "Match refund", exact: true })).toBeVisible();
+  await expect(desktop.getByRole("button", { name: "Fix miles" }).first()).toBeVisible();
   await expect(desktop.getByRole("columnheader", { name: "Issue" })).toHaveCount(0);
   await expect(desktop.getByLabel("Shopee SG category")).toBeVisible();
+  await expect(desktop.getByAltText("Amazon SG logo")).toBeVisible();
+  await expect(desktop.getByAltText("DBS Altitude card image")).toBeVisible();
   await expect(desktop.getByLabel("Why this needs review")).toBeVisible();
   await expect(desktop.getByLabel("Search merchant, note, card, MCC, or refund")).toBeVisible();
 
